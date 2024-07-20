@@ -1,3 +1,24 @@
+# intro
+基于paddlejs 人像分割模型实现 虚拟照像机 切换虚拟背景
+
+# Dependences
+
+- [paddle.js](https://paddlejs.baidu.com/doc) 
+- [electron](https://www.electronjs.org/zh/docs/latest/tutorial/quick-start)
+- [vue3] (https://v3.vuejs.org)
+
+# How to
+
+- 安装依赖
+``` bash
+yarn 
+```
+- 运行
+```bash
+yarn dev
+```
+
+---
 # Vue 3 + TypeScript + Vite
 
 This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.

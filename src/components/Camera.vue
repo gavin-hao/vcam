@@ -1,7 +1,7 @@
 <template>
   <div class="camera">
     <div class="viewport" ref="viewport">
-      <video id="video" ref="videoRef"></video>
+      <video id="video" ref="videoRef" style="display: none"></video>
       <canvas id="view" ref="viewRef"></canvas>
       <canvas id="back" ref="backgroundRef"></canvas>
       <!-- <canvas id="blur" ref="blurRef"></canvas> -->
@@ -42,7 +42,7 @@ onMounted(async () => {
   };
   const canvas1 = viewRef.value!;
   const modelPath = '/ppsegv2_new/model.json';
-  await humanseg.load(true, false, modelPath);
+  // await humanseg.load(true, false);
   camera = new Camera(videoRef.value!, {
     mirror: true,
     enableOnInactiveState: true,
@@ -50,8 +50,8 @@ onMounted(async () => {
       videoCanvas.width = video.width;
       videoCanvas.height = video.height;
       videoCanvasCtx.drawImage(video, 0, 0, video.width, video.height);
-      const { data } = await humanseg.getGrayValue(videoCanvas);
-      humanseg.drawHumanSeg(data, canvas1, background_canvas);
+      // const { data } = await humanseg.getGrayValue(videoCanvas);
+      // humanseg.drawHumanSeg(data, canvas1, background_canvas);
     },
     videoLoaded: () => {
       camera.start();
