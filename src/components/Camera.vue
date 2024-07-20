@@ -1,23 +1,32 @@
 <template>
   <div class="camera">
     <div class="viewport" ref="viewport">
-      <video id="video" ref="videoRef" style="display: none"></video>
-      <canvas id="view" ref="viewRef"></canvas>
-      <canvas id="back" ref="backgroundRef"></canvas>
+      <video
+        id="video"
+        ref="videoRef"
+        style="display: none"
+        :style="{ width: styles?.width, height: styles?.height }"
+      ></video>
+      <canvas id="view" ref="viewRef" :style="{ width: styles?.width, height: styles?.height }"></canvas>
+      <!-- <canvas id="back" ref="backgroundRef"></canvas> -->
       <!-- <canvas id="blur" ref="blurRef"></canvas> -->
       <!-- <canvas id="mask"></canvas> -->
     </div>
     <div class="controls">
       <div class="bg-switch"></div>
       <button class="camera-btn" @click="handlePhotoClick">拍照</button>
-      <div class="filter-effects"></div>
+      <div class="previews">
+        <div class="preview" v-for="item in previews">
+          <img style="height: 60px; width: auto" :src="item" alt="preview" />
+        </div>
+      </div>
     </div>
   </div>
 </template>
 <script setup lang="ts">
 import Camera from '@paddlejs-mediapipe/camera';
 import * as humanseg from '@paddlejs-models/humanseg/lib/index';
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 let camera: Camera;
 const videoRef = ref<HTMLVideoElement>();
 const viewRef = ref<HTMLCanvasElement>();
@@ -29,11 +38,28 @@ const viewport = ref<HTMLDivElement>();
 const videoCanvas = document.createElement('canvas') as HTMLCanvasElement;
 const videoCanvasCtx = videoCanvas.getContext('2d')!;
 
+const styles = ref<Partial<CSSStyleDeclaration>>({});
+const resizeObserver = new ResizeObserver((entrys) => {
+  const { width, height } = entrys[0].contentRect;
+  setSize(width, height);
+});
+onMounted(() => {
+  resizeObserver.observe(viewport.value!);
+});
+onUnmounted(() => {
+  resizeObserver.disconnect();
+});
+const setSize = (width: number, height: number) => {
+  styles.value = {
+    width: `${width}px`,
+    height: `${height}px`,
+  };
+};
 onMounted(async () => {
-  const back_canvas = document.getElementById('back') as HTMLCanvasElement;
+  // const back_canvas = document.getElementById('back') as HTMLCanvasElement;
   const background_canvas = document.createElement('canvas');
-  background_canvas.width = back_canvas.width;
-  background_canvas.height = back_canvas.height;
+  background_canvas.width = viewRef.value!.clientWidth;
+  background_canvas.height = viewRef.value!.clientHeight;
 
   const img = new Image();
   img.src = '/assets/bg-imgs/bg_01.jpg';
@@ -47,19 +73,25 @@ onMounted(async () => {
     mirror: true,
     enableOnInactiveState: true,
     onFrame: async (video) => {
-      videoCanvas.width = video.width;
-      videoCanvas.height = video.height;
-      videoCanvasCtx.drawImage(video, 0, 0, video.width, video.height);
+      // console.log(video);
+      const { height = 0, width = 0 } = viewRef.value?.getBoundingClientRect() || {};
+      videoCanvas.width = width;
+      videoCanvas.height = height;
+      videoCanvasCtx.drawImage(video, 0, 0, width, height);
       // const { data } = await humanseg.getGrayValue(videoCanvas);
       // humanseg.drawHumanSeg(data, canvas1, background_canvas);
+      canvas1.getContext('2d')?.drawImage(videoCanvas, 0, 0, videoCanvas.width, videoCanvas.height);
     },
     videoLoaded: () => {
       camera.start();
     },
   });
 });
+const previews = ref<string[]>([]);
 const handlePhotoClick = () => {
   camera.pause();
+  previews.value.push(viewRef.value!.toDataURL());
+  camera.start();
 };
 </script>
 <style lang="scss" scoped>
@@ -72,6 +104,7 @@ const handlePhotoClick = () => {
   .viewport {
     flex: 1;
     background: #dedede;
+    position: relative;
     #video {
       width: 500px;
       height: 280px;
@@ -79,9 +112,12 @@ const handlePhotoClick = () => {
       object-fit: contain;
     }
     #view {
-      transform: scaleX(-1);
-      width: 500px;
-      height: 280px;
+      // transform: scaleX(-1);
+      // width: 500px;
+      // height: 280px;
+      position: absolute;
+      width: 100%;
+      height: 100%;
     }
   }
   .controls {
@@ -135,6 +171,19 @@ const handlePhotoClick = () => {
         transform: translate(-50%, -50%);
         opacity: 1;
         transition: all 0.3s ease;
+      }
+    }
+    .previews {
+      overflow-x: auto;
+      overflow-y: hidden;
+      display: flex;
+      align-items: center;
+      width: 200px;
+      .preview {
+        height: 60px;
+        width: 96px;
+        border: 1px solid #dedede;
+        margin-right: 8px;
       }
     }
   }
