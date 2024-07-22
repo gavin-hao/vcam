@@ -1,11 +1,9 @@
 <template>
   <div class="camera">
     <div class="viewport" ref="viewport">
-      <video id="video" ref="videoRef" style="display: none"></video>
-      <canvas id="view" ref="viewRef"></canvas>
-      <canvas id="back" ref="backgroundRef"></canvas>
-      <!-- <canvas id="blur" ref="blurRef"></canvas> -->
-      <!-- <canvas id="mask"></canvas> -->
+      <video id="video" ref="videoRef" width="640" height="480" style="opacity: 0;"></video>
+      <canvas id="view" ref="viewRef" width="640" height="480"></canvas>
+      <canvas id="back" ref="backgroundRef" width="640" height="480"></canvas>
     </div>
     <div class="controls">
       <div class="bg-switch"></div>
@@ -16,51 +14,64 @@
 </template>
 <script setup lang="ts">
 import Camera from '@paddlejs-mediapipe/camera';
-import * as humanseg from '@paddlejs-models/humanseg/lib/index';
+import * as humanseg from '@paddlejs-models/humanseg';
 import { onMounted, ref } from 'vue';
+import image from '../assets/bg-imgs/bg_01.jpg';
 let camera: Camera;
 const videoRef = ref<HTMLVideoElement>();
 const viewRef = ref<HTMLCanvasElement>();
 const backgroundRef = ref<HTMLCanvasElement>();
-// const blurRef = ref<HTMLCanvasElement>();
-// const maskRef = ref<HTMLCanvasElement>();
 const viewport = ref<HTMLDivElement>();
 
 const videoCanvas = document.createElement('canvas') as HTMLCanvasElement;
 const videoCanvasCtx = videoCanvas.getContext('2d')!;
 
-onMounted(async () => {
-  const back_canvas = document.getElementById('back') as HTMLCanvasElement;
-  const background_canvas = document.createElement('canvas');
-  background_canvas.width = back_canvas.width;
-  background_canvas.height = back_canvas.height;
 
+onMounted(async () => {
+  await humanseg.load(true, false);
+  const viewCanvas = document.getElementById('view') as HTMLCanvasElement;
+  // const ctx = viewCanvas.getContext('2d')
+  const back_canvas = document.getElementById('back') as HTMLCanvasElement;
+  
+
+
+  const background_canvas = document.createElement('canvas');
+  const ctx = background_canvas.getContext('2d')
+  background_canvas.width = 640;
+  background_canvas.height = 480;
   const img = new Image();
-  img.src = '/assets/bg-imgs/bg_01.jpg';
   img.onload = () => {
-    background_canvas.getContext('2d')?.drawImage(img, 0, 0, background_canvas.width, background_canvas.height);
+    ctx.drawImage(img, 0, 0, 640, 480);
   };
-  const canvas1 = viewRef.value!;
-  const modelPath = '/ppsegv2_new/model.json';
-  // await humanseg.load(true, false);
-  camera = new Camera(videoRef.value!, {
-    mirror: true,
-    enableOnInactiveState: true,
-    onFrame: async (video) => {
-      videoCanvas.width = video.width;
-      videoCanvas.height = video.height;
-      videoCanvasCtx.drawImage(video, 0, 0, video.width, video.height);
-      // const { data } = await humanseg.getGrayValue(videoCanvas);
-      // humanseg.drawHumanSeg(data, canvas1, background_canvas);
-    },
-    videoLoaded: () => {
-      camera.start();
-    },
-  });
+  img.src = image
+
+
+  const view = viewRef.value!;
+  // camera = new Camera(videoRef.value!, {
+  //   mirror: true,
+  //   enableOnInactiveState: true,
+  //   onFrame: async (video) => {
+  //     // videoCanvas.width = video.width;
+  //     // videoCanvas.height = video.height;
+  //     console.log(video, 123)
+  //     const { data } = await humanseg.getGrayValue(video);
+  //     humanseg.drawHumanSeg(data, view, background_canvas);
+  //   },
+  //   videoLoaded: () => {
+  //     camera.start();
+  //   },
+  // });
 });
 const handlePhotoClick = () => {
   camera.pause();
 };
+
+const uploadImg = (a) => {
+  console.log(a, '1111')
+}
+
+
+
 </script>
 <style lang="scss" scoped>
 .camera {

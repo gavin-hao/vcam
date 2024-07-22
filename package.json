@@ -10,7 +10,10 @@
   },
   "dependencies": {
     "@paddlejs-mediapipe/camera": "^0.0.4",
-    "@paddlejs-models/humanseg": "^1.2.3",
+    "@paddlejs-models/humanseg": "1.2.0",
+    "@paddlejs-mediapipe/opencv": "^1.0.0",
+    "@paddlejs/paddlejs-backend-webgl": "^1.0.1",
+    "@paddlejs/paddlejs-core": "^2.0.1",
     "vue": "^3.4.21"
   },
   "devDependencies": {
