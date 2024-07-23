@@ -1,7 +1,8 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, ipcMain } from 'electron'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import fs from 'node:fs'
 
 const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -66,3 +67,54 @@ app.on('activate', () => {
 })
 
 app.whenReady().then(createWindow)
+
+function createUpload() {
+  console.error(1111)
+  const directory = path.join(__dirname, 'upload');
+  fs.access(directory, fs.constants.F_OK, (err) => {
+    if (err) {
+      fs.mkdir(directory, { recursive: true }, (mkdirErr) => {
+        if (mkdirErr) {
+          console.error(mkdirErr);
+          return;
+        }
+      });
+    }
+  });
+}
+
+ipcMain.on('upload-file', (event, fileData, fileName) => {
+      console.log(99999999)
+      const buffer = Buffer.from(fileData);
+      createUpload()
+      const filePath = path.join(__dirname, 'upload', fileName);
+      console.log(filePath, 'fi')
+      fs.writeFile(filePath, buffer, (err) => {
+        if (err) {
+          console.error(err, 22222);
+        } else {
+          getMessageList(event)
+        }
+      });
+})
+
+function getMessageList (event: any) {
+  const directoryPath = path.join(__dirname, 'upload'); // 替换为你的文件夹路径
+  fs.readdir(directoryPath, (err, files) => {
+    if (err) {
+      return console.log('读取文件夹出错:', err);
+    }
+    event.reply('receive', files)
+
+    // event.reply('receive', files.map((item) => path.join(__dirname, 'upload', item)))
+    console.log(files, 111111111111111)
+    // ipcMain.emit('imageList', files)
+  });
+}
+
+ipcMain.on('get-image-list', (event) => {
+  createUpload()
+  getMessageList(event)
+})
+
+
