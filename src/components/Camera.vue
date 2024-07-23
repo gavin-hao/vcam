@@ -78,9 +78,9 @@ onMounted(async () => {
       videoCanvas.width = width;
       videoCanvas.height = height;
       videoCanvasCtx.drawImage(video, 0, 0, width, height);
-      // const { data } = await humanseg.getGrayValue(videoCanvas);
-      // humanseg.drawHumanSeg(data, canvas1, background_canvas);
-      canvas1.getContext('2d')?.drawImage(videoCanvas, 0, 0, videoCanvas.width, videoCanvas.height);
+      const { data } = await humanseg.getGrayValue(videoCanvas);
+      humanseg.drawHumanSeg(data, canvas1, background_canvas);
+      // canvas1.getContext('2d')?.drawImage(videoCanvas, 0, 0, videoCanvas.width, videoCanvas.height);
     },
     videoLoaded: () => {
       camera.start();
