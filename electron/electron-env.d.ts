@@ -1,5 +1,7 @@
 /// <reference types="vite-plugin-electron/electron-env" />
 
+declare module '@paddlejs-models/humanseg'
+
 declare namespace NodeJS {
   interface ProcessEnv {
     /**
