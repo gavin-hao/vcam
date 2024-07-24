@@ -3,12 +3,21 @@
     <div class="viewport" ref="viewport">
       <video id="video" ref="videoRef" playsinline :width="width" :height="height"></video>
       <canvas id="view" ref="viewRef"></canvas>
-      <canvas id="background" ref="backgroundCanvas" :width="width" :height="height"> </canvas>
+      <img id="background" v-show="!!selectedImage" :src="getUrl(selectedImage)" alt="" />
     </div>
     <div class="controls">
       <div class="left">
         <button class="setting-btn" aria-label="设置背景图" title="设置背景" @click="handleBackgroundSettingClick">
           <img width="32" height="32" src="../assets/background-effect.svg" alt="" />
+        </button>
+        <button
+          class="setting-btn"
+          style="margin-left: 20px"
+          aria-label="重制摄像头"
+          title="重制摄像头"
+          @click="switchCamera"
+        >
+          <img width="16" height="16" src="../assets/camera.svg" alt="" />
         </button>
       </div>
       <button class="camera-btn" @click="handlePhotoClick">拍照</button>
@@ -48,7 +57,7 @@
 <script setup lang="ts">
 import Camera from '@paddlejs-mediapipe/camera';
 import * as humanseg from '@paddlejs-models/humanseg';
-import { onMounted, ref, watch, watchEffect } from 'vue';
+import { onMounted, ref, watchEffect } from 'vue';
 // import image from '../assets/bg-imgs/bg_01.jpg';
 // import fs from 'fs';
 
@@ -64,15 +73,14 @@ const { width, height } = useElementBounding(viewport);
 const imageList = ref<string[]>([]);
 const selectedImage = ref<string>('');
 const dialogBackgroundVisible = ref<boolean>();
-const backgroundCanvas = ref<HTMLCanvasElement>(); //document.createElement('canvas') as HTMLCanvasElement;
+const backgroundCanvas = document.createElement('canvas') as HTMLCanvasElement;
 const audioShutter = ref<HTMLAudioElement>();
-const bgCanvas = document.createElement('canvas') as HTMLCanvasElement;
 const lastPhoto = ref<string>();
 
 window.ipcRenderer.on('receive', (event, data) => {
   console.log(event);
   imageList.value = data;
-  selectedImage.value = data[0];
+  selectedImage.value = data?.[0];
 });
 
 const getUrl = (image: string) => {
@@ -121,30 +129,14 @@ watchEffect(() => {
   }
 });
 function drawBackground(imgName: string) {
-  const ctx = backgroundCanvas.value?.getContext('2d')!;
+  const bgCanvas = backgroundCanvas!;
+  const ctx = bgCanvas?.getContext('2d')!;
   const backgroundImg = new Image();
   backgroundImg.src = getUrl(imgName);
   backgroundImg.onload = () => {
-    ctx?.drawImage(backgroundImg, 0, 0, backgroundCanvas.value!.width, backgroundCanvas.value!.height);
-  };
-}
-function genImagSize(box_x: number, box_y: number, box_w: number, box_h: number, source_w: number, source_h: number) {
-  var dx = box_x,
-    dy = box_y,
-    dWidth = box_w,
-    dHeight = box_h;
-  if (source_w > source_h || (source_w == source_h && box_w < box_h)) {
-    dHeight = (source_h * dWidth) / source_w;
-    dy = box_y + (box_h - dHeight) / 2;
-  } else if (source_w < source_h || (source_w == source_h && box_w > box_h)) {
-    dWidth = (source_w * dHeight) / source_h;
-    dx = box_x + (box_w - dWidth) / 2;
-  }
-  return {
-    dx,
-    dy,
-    dWidth,
-    dHeight,
+    bgCanvas.width = backgroundImg.naturalWidth || backgroundImg.width;
+    bgCanvas.height = backgroundImg.naturalHeight || backgroundImg.height;
+    ctx?.drawImage(backgroundImg, 0, 0, backgroundImg.width, backgroundImg.height);
   };
 }
 
@@ -161,21 +153,14 @@ onMounted(async () => {
     enableOnInactiveState: true,
     onFrame: async (video) => {
       const view = viewRef.value!;
-      // view.width = video.width;
-      // view.height = video.height;
-      // var imgRect = genImagSize(
-      //   0,
-      //   0,
-      //   video.width,
-      //   video.height,
-      //   backgroundCanvas.value!.width,
-      //   backgroundCanvas.value!.height
-      // );
-      // bgCanvas
-      //   .getContext('2d')!
-      //   .drawImage(backgroundCanvas.value!, imgRect.dx, imgRect.dy, imgRect.dWidth, imgRect.dHeight);
-      const { data } = await humanseg.getGrayValue(video);
-      humanseg.drawHumanSeg(data, view);
+      if (selectedImage.value) {
+        const { data } = await humanseg.getGrayValue(video);
+        humanseg.drawHumanSeg(data, view, backgroundCanvas);
+      } else {
+        view.width = video.width;
+        view.height = video.height;
+        view.getContext('2d')?.drawImage(video, 0, 0, video.width, video.height);
+      }
     },
     videoLoaded: () => {
       camera.start();
@@ -183,7 +168,9 @@ onMounted(async () => {
   });
 });
 // const previewPhotoCanvas = document.createElement('canvas') as HTMLCanvasElement;
-
+const switchCamera = () => {
+  camera?.switchCameras();
+};
 const openGallery = () => {
   window.ipcRenderer.send('open-gallery');
   // window.ipcRenderer.on('selected-files', (event, files) => {
@@ -298,17 +285,20 @@ const uploadImg = (event: any) => {
     }
 
     #view {
-      transform: scaleX(-1);
+      // transform: scaleX(-1);
       position: relative;
       z-index: 1;
+      // opacity: 0;
     }
     #background {
       position: absolute;
       top: 0;
       left: 0;
+      width: 100%;
+      height: 100%;
       object-fit: fill;
-      z-index: -1;
-      opacity: 0.5;
+      z-index: 0;
+      opacity: 0.9;
     }
   }
 
