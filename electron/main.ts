@@ -90,7 +90,12 @@ ipcMain.on('open-gallery', () => {
 });
 
 function mkdirDir(name: string) {
-  const directory = path.join(process.env.TEMP || __dirname, 'vcam', name);
+  let directory
+  if (name === 'background') {
+    directory = path.join(__dirname, 'upload');
+  } else {
+    directory = path.join(process.env.TEMP || __dirname, 'vcam', name);
+  }
   fs.access(directory, fs.constants.F_OK, (err) => {
     if (err) {
       fs.mkdir(directory, { recursive: true }, (mkdirErr) => {
@@ -107,7 +112,7 @@ ipcMain.on('upload-file', (event, fileData, fileName) => {
   console.log(99999999);
   const buffer = Buffer.from(fileData);
   mkdirDir('background');
-  const filePath = path.join(process.env.TEMP || __dirname, 'vcam', 'background', fileName);
+  const filePath = path.join(__dirname, 'upload', fileName.replace(/^.+?\./, new Date().getTime() + '.'));
   console.log(filePath, 'fi');
   fs.writeFile(filePath, buffer, (err) => {
     if (err) {
@@ -133,7 +138,7 @@ ipcMain.on('save-image', (event, imageData, fileName) => {
 });
 
 function getMessageList(event: any) {
-  const directoryPath = path.join(process.env.TEMP || __dirname, 'vcam', 'background');
+  const directoryPath = path.join(__dirname, 'upload'); // 替换为你的文件夹路径
   fs.readdir(directoryPath, (err, files) => {
     if (err) {
       return console.log('读取文件夹出错:', err);

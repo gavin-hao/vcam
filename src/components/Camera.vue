@@ -2,7 +2,7 @@
   <div class="camera">
     <div class="viewport" ref="viewport">
       <video id="video" ref="videoRef" playsinline :width="width" :height="height"></video>
-      <canvas id="view" ref="viewRef"></canvas>
+      <canvas style="display: none;" id="view" ref="viewRef"></canvas>
       <img id="background" v-show="!!selectedImage" :src="getUrl(selectedImage)" alt="" />
     </div>
     <div class="controls">
@@ -40,7 +40,6 @@
       </el-button>
     </div>
     <div class="image-list">
-      <div @click="selectImage('')" class="image-item" :class="{ 'selected-image': selectedImage === '' }">无背景</div>
       <div
         class="image-item"
         v-for="image in imageList"
@@ -50,6 +49,7 @@
       >
         <img :src="getUrl(image)" alt="" />
       </div>
+      <div @click="selectImage('')" class="image-item" :class="{ 'selected-image': selectedImage === '' || imageList.length === 0 }">无背景</div>
     </div>
   </el-dialog>
   <audio src="/sound/camera-shutter.mp3" :loop="false" :volume="0.7" v-show="false" ref="audioShutter"></audio>
@@ -58,9 +58,6 @@
 import Camera from '@paddlejs-mediapipe/camera';
 import * as humanseg from '@paddlejs-models/humanseg';
 import { onMounted, ref, watchEffect } from 'vue';
-// import image from '../assets/bg-imgs/bg_01.jpg';
-// import fs from 'fs';
-
 import { useElementBounding } from '@vueuse/core';
 import { ElDialog, ElButton } from 'element-plus';
 
@@ -80,11 +77,10 @@ const lastPhoto = ref<string>();
 window.ipcRenderer.on('receive', (event, data) => {
   console.log(event);
   imageList.value = data;
-  selectedImage.value = data?.[0];
 });
 
 const getUrl = (image: string) => {
-  return '/dist-electron/upload/' + image;
+  return '../dist-electron/upload/' + image;
 };
 
 const selectImage = (image: string) => {
@@ -92,15 +88,19 @@ const selectImage = (image: string) => {
 };
 
 const keyDown = (event: KeyboardEvent) => {
-  console.log(event);
+  console.log(event, 123123123)
+  if (!dialogBackgroundVisible.value) return
   const { code } = event;
   switch (code) {
     case 'ArrowLeft':
     case 'ArrowRight':
+    case 'ArrowUp':
+    case 'ArrowDown':
       changeImage(code);
       break;
     case 'Enter':
     case 'Space':
+    case 'Tab':
       handlePhotoClick();
       break;
     default:
@@ -109,21 +109,37 @@ const keyDown = (event: KeyboardEvent) => {
 };
 
 const changeImage = (code: string) => {
-  let index = imageList.value.findIndex((item) => item === selectedImage.value);
-  if (index > -1) {
-    if (code === 'ArrowRight') {
-      index = index + 1 === imageList.value.length ? index : index + 1;
-      selectedImage.value = imageList.value[index];
+  if (imageList.value.length === 0) {
+    selectedImage.value = ''
+    return
+  }
+  if (selectedImage.value === '') {
+    if (code === 'ArrowRight' || code === 'ArrowDown') {
+      selectedImage.value = imageList.value[0]
     }
-    if (code === 'ArrowLeft') {
-      if (index === 0) {
-        selectedImage.value = ""
-      } else {
-        selectedImage.value = imageList.value[index - 1];
-      }
+    if (code === 'ArrowLeft' || code === 'ArrowUp') {
+      selectedImage.value = imageList.value[imageList.value.length - 1]
     }
   } else {
-    selectedImage.value = imageList.value[0];
+    let index = imageList.value.findIndex((item) => item === selectedImage.value);
+    if (index > -1) {
+      if (code === 'ArrowRight' || code === 'ArrowDown') {
+        if (index + 1 === imageList.value.length) {
+          selectedImage.value = ''
+        } else {
+          selectedImage.value = imageList.value[index + 1];
+        }
+      }
+      if (code === 'ArrowLeft' || code === 'ArrowUp') {
+        if (index === 0) {
+          selectedImage.value = ""
+        } else {
+          selectedImage.value = imageList.value[index - 1];
+        }
+      }
+    } else {
+      selectedImage.value = '';
+    }
   }
 };
 
@@ -145,6 +161,7 @@ function drawBackground(imgName: string) {
 }
 
 onMounted(async () => {
+  selectedImage.value = ""
   document.addEventListener('keydown', function (event) {
     keyDown(event);
   });
@@ -152,24 +169,24 @@ onMounted(async () => {
   window.ipcRenderer.send('get-image-list');
 
   await humanseg.load(true, false);
-  camera = new Camera(videoRef.value!, {
-    mirror: true,
-    enableOnInactiveState: true,
-    onFrame: async (video) => {
-      const view = viewRef.value!;
-      if (selectedImage.value) {
-        const { data } = await humanseg.getGrayValue(video);
-        humanseg.drawHumanSeg(data, view, backgroundCanvas);
-      } else {
-        view.width = video.width;
-        view.height = video.height;
-        view.getContext('2d')?.drawImage(video, 0, 0, video.width, video.height);
-      }
-    },
-    videoLoaded: () => {
-      camera.start();
-    },
-  });
+  // camera = new Camera(videoRef.value!, {
+  //   mirror: true,
+  //   enableOnInactiveState: true,
+  //   onFrame: async (video) => {
+  //     const view = viewRef.value!;
+  //     if (!!selectedImage.value) {
+  //       const { data } = await humanseg.getGrayValue(video);
+  //       humanseg.drawHumanSeg(data, view, backgroundCanvas);
+  //     } else {
+  //       view.width = video.width;
+  //       view.height = video.height;
+  //       view.getContext('2d')?.drawImage(video, 0, 0, video.width, video.height);
+  //     }
+  //   },
+  //   videoLoaded: () => {
+  //     camera.start();
+  //   },
+  // });
 });
 // const previewPhotoCanvas = document.createElement('canvas') as HTMLCanvasElement;
 const switchCamera = () => {
