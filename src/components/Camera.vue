@@ -23,7 +23,7 @@
       </div>
     </div>
   </div>
-  <el-dialog v-model="dialogBackgroundVisible" title="设置背景图片">
+  <el-dialog width="80%" height="80%" class="back-dialog" v-model="dialogBackgroundVisible" title="设置背景图片">
     <div class="upload-bg">
       <el-button @click="handleAddBackgroundClick"
         >添加背景图
@@ -48,7 +48,7 @@
 <script setup lang="ts">
 import Camera from '@paddlejs-mediapipe/camera';
 import * as humanseg from '@paddlejs-models/humanseg';
-import { onMounted, ref, watch, watchEffect } from 'vue';
+import { onMounted, ref, watchEffect } from 'vue';
 // import image from '../assets/bg-imgs/bg_01.jpg';
 // import fs from 'fs';
 
@@ -87,8 +87,8 @@ const keyDown = (event: KeyboardEvent) => {
   console.log(event);
   const { code } = event;
   switch (code) {
-    case 'ArrowDown':
-    case 'ArrowUp':
+    case 'ArrowLeft':
+    case 'ArrowRight':
       changeImage(code);
       break;
     case 'Enter':
@@ -103,13 +103,17 @@ const keyDown = (event: KeyboardEvent) => {
 const changeImage = (code: string) => {
   let index = imageList.value.findIndex((item) => item === selectedImage.value);
   if (index > -1) {
-    if (code === 'ArrowDown') {
+    if (code === 'ArrowRight') {
       index = index + 1 === imageList.value.length ? index : index + 1;
+      selectedImage.value = imageList.value[index];
     }
-    if (code === 'ArrowUp') {
-      index = index === 0 ? 0 : index - 1;
+    if (code === 'ArrowLeft') {
+      if (index === 0) {
+        selectedImage.value = ""
+      } else {
+        selectedImage.value = imageList.value[index - 1];
+      }
     }
-    selectedImage.value = imageList.value[index];
   } else {
     selectedImage.value = imageList.value[0];
   }
@@ -200,10 +204,11 @@ const openGallery = () => {
 
 const savePhoto = () => {
   const source = viewRef.value!;
+  console.log(source, 11111)
   const imageUrl = source.toDataURL('image/jpeg');
   lastPhoto.value = imageUrl;
 
-  ipcRenderer.send('save-image', imageUrl);
+  window.ipcRenderer.send('save-image', imageUrl, new Date().getTime() + '.jpeg');
   // const ctx = source.getContext('2d');
   // ctx?.save();
   // const photo = ctx?.getImageData(0, 0, source.width, source.height);
@@ -251,18 +256,25 @@ const uploadImg = (event: any) => {
   display: flex;
   flex-direction: row;
   align-items: center;
+  min-height: 200px;
 
   overflow: auto;
   flex-wrap: wrap;
   .image-item {
+    align-items: center;
+    justify-content: center;
+    background-color: beige;
+    border-radius: 4px;
     width: 128px;
     height: 72px;
     padding: 5px;
     display: flex;
     align-items: center;
+    padding: 4px;
+    margin: 4px;
     > img {
       width: 100%;
-      height: auto;
+      height: 100%;
       object-fit: contain;
       display: inline-block;
     }
@@ -399,5 +411,8 @@ const uploadImg = (event: any) => {
       object-fit: contain;
     }
   }
+}
+.el-dialog__body {
+  height: 600px;
 }
 </style>

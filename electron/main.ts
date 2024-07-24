@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, Menu } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, shell } from 'electron';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -33,6 +33,7 @@ function createWindow() {
     },
   });
 
+  console.log(process.env, 111111)
   process.env.NODE_ENV !== 'development' && Menu.setApplicationMenu(null);
 
   // Test active push message to Renderer-process.
@@ -66,23 +67,28 @@ app.on('activate', () => {
   }
 });
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  mkdirDir('photo')
+  mkdirDir('background')
+  createWindow()
+});
 
 
 // 处理渲染进程发送的事件
 ipcMain.on('open-gallery', () => {
-  win && dialog.showOpenDialogSync(win, {
-    properties: ['openFile', 'multiSelections'],
-    defaultPath: path.join(MAIN_DIST, 'upload'),
-    filters: [
-      { name: 'Images', extensions: ['jpg', 'png', 'gif'] }
-    ]
-  })
+  mkdirDir('photo')
+  shell.openPath(path.join(process.env.TEMP || __dirname, 'vcam', 'photo'))
+  // win && dialog.showOpenDialogSync(win, {
+  //   properties: ['openDirectory'],
+  //   defaultPath: path.join(process.env.TEMP || __dirname, 'vcam', 'photo'),
+  //   filters: [
+  //     { name: 'Images', extensions: ['jpg', 'png', 'gif'] }
+  //   ]
+  // })
 });
 
-function createUpload() {
-  console.error(1111);
-  const directory = path.join(__dirname, 'upload');
+function mkdirDir(name: string) {
+  const directory = path.join(process.env.TEMP || __dirname, 'vcam', name);
   fs.access(directory, fs.constants.F_OK, (err) => {
     if (err) {
       fs.mkdir(directory, { recursive: true }, (mkdirErr) => {
@@ -98,8 +104,8 @@ function createUpload() {
 ipcMain.on('upload-file', (event, fileData, fileName) => {
   console.log(99999999);
   const buffer = Buffer.from(fileData);
-  createUpload();
-  const filePath = path.join(__dirname, 'upload', fileName);
+  mkdirDir('background');
+  const filePath = path.join(process.env.TEMP || __dirname, 'vcam', 'background', fileName);
   console.log(filePath, 'fi');
   fs.writeFile(filePath, buffer, (err) => {
     if (err) {
@@ -110,8 +116,22 @@ ipcMain.on('upload-file', (event, fileData, fileName) => {
   });
 });
 
+ipcMain.on('save-image', (event, imageData, fileName) => {
+  console.log(event, imageData)
+  const buffer = Buffer.from(imageData.replace("data:image/jpeg;base64,", ""), 'base64');
+  mkdirDir('photo');
+  const filePath = path.join(process.env.TEMP || __dirname, 'vcam', 'photo', fileName);
+  fs.writeFile(filePath, buffer, { encoding: 'base64' }, (err) => {
+    if (err) {
+      console.error(err, 22222);
+    } else {
+      getMessageList(event);
+    }
+  });
+});
+
 function getMessageList(event: any) {
-  const directoryPath = path.join(__dirname, 'upload'); // 替换为你的文件夹路径
+  const directoryPath = path.join(process.env.TEMP || __dirname, 'vcam', 'background');
   fs.readdir(directoryPath, (err, files) => {
     if (err) {
       return console.log('读取文件夹出错:', err);
@@ -129,6 +149,6 @@ function getMessageList(event: any) {
 }
 
 ipcMain.on('get-image-list', (event) => {
-  createUpload();
+  mkdirDir('background');
   getMessageList(event);
 });
