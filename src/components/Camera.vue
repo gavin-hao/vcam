@@ -12,7 +12,11 @@
         </button>
       </div>
       <button class="camera-btn" @click="handlePhotoClick">拍照</button>
+
       <div class="right">
+        <div class="photo-preview" v-show="!!lastPhoto">
+          <img :src="lastPhoto" alt="" />
+        </div>
         <button class="setting-btn" title="相册" @click="handleAlbumlick">
           <img width="32" height="32" src="../assets/photo-album.svg" alt="" />
         </button>
@@ -39,11 +43,15 @@
       </div>
     </div>
   </el-dialog>
+  <audio src="/sound/camera-shutter.mp3" :loop="false" :volume="0.7" v-show="false" ref="audioShutter"></audio>
 </template>
 <script setup lang="ts">
 import Camera from '@paddlejs-mediapipe/camera';
 import * as humanseg from '@paddlejs-models/humanseg';
-import { onMounted, ref, watchEffect } from 'vue';
+import { onMounted, ref, watch, watchEffect } from 'vue';
+// import image from '../assets/bg-imgs/bg_01.jpg';
+// import fs from 'fs';
+
 import { useElementBounding } from '@vueuse/core';
 import { ElDialog, ElButton } from 'element-plus';
 
@@ -54,27 +62,30 @@ const viewRef = ref<HTMLCanvasElement>();
 const viewport = ref<HTMLDivElement>();
 const { width, height } = useElementBounding(viewport);
 const imageList = ref<string[]>([]);
-const selectedImage = ref<string>("");
+const selectedImage = ref<string>('');
 const dialogBackgroundVisible = ref<boolean>();
 const backgroundCanvas = ref<HTMLCanvasElement>(); //document.createElement('canvas') as HTMLCanvasElement;
+const audioShutter = ref<HTMLAudioElement>();
+const bgCanvas = document.createElement('canvas') as HTMLCanvasElement;
+const lastPhoto = ref<string>();
 
 window.ipcRenderer.on('receive', (event, data) => {
-  console.log(event)
-  imageList.value = data
-  selectedImage.value = data[0]
+  console.log(event);
+  imageList.value = data;
+  selectedImage.value = data[0];
 });
 
 const getUrl = (image: string) => {
-  return '../dist-electron/upload/' + image
-}
+  return '/dist-electron/upload/' + image;
+};
 
 const selectImage = (image: string) => {
-  selectedImage.value = image
-}
+  selectedImage.value = image;
+};
 
 const keyDown = (event: KeyboardEvent) => {
-  console.log(event)
-  const { code } = event
+  console.log(event);
+  const { code } = event;
   switch (code) {
     case 'ArrowDown':
     case 'ArrowUp':
@@ -90,7 +101,7 @@ const keyDown = (event: KeyboardEvent) => {
 };
 
 const changeImage = (code: string) => {
-  let index = imageList.value.findIndex((item) => item === selectedImage.value)
+  let index = imageList.value.findIndex((item) => item === selectedImage.value);
   if (index > -1) {
     if (code === 'ArrowDown') {
       index = index + 1 === imageList.value.length ? index : index + 1;
@@ -136,7 +147,6 @@ function genImagSize(box_x: number, box_y: number, box_w: number, box_h: number,
     dHeight,
   };
 }
-const bgCanvas = document.createElement('canvas') as HTMLCanvasElement;
 
 onMounted(async () => {
   document.addEventListener('keydown', function (event) {
@@ -153,25 +163,26 @@ onMounted(async () => {
       const view = viewRef.value!;
       // view.width = video.width;
       // view.height = video.height;
-      var imgRect = genImagSize(
-        0,
-        0,
-        video.width,
-        video.height,
-        backgroundCanvas.value!.width,
-        backgroundCanvas.value!.height
-      );
-      bgCanvas
-        .getContext('2d')!
-        .drawImage(backgroundCanvas.value!, imgRect.dx, imgRect.dy, imgRect.dWidth, imgRect.dHeight);
+      // var imgRect = genImagSize(
+      //   0,
+      //   0,
+      //   video.width,
+      //   video.height,
+      //   backgroundCanvas.value!.width,
+      //   backgroundCanvas.value!.height
+      // );
+      // bgCanvas
+      //   .getContext('2d')!
+      //   .drawImage(backgroundCanvas.value!, imgRect.dx, imgRect.dy, imgRect.dWidth, imgRect.dHeight);
       const { data } = await humanseg.getGrayValue(video);
-      humanseg.drawHumanSeg(data, view, bgCanvas);
+      humanseg.drawHumanSeg(data, view);
     },
     videoLoaded: () => {
       camera.start();
     },
   });
 });
+// const previewPhotoCanvas = document.createElement('canvas') as HTMLCanvasElement;
 
 const openGallery = () => {
   window.ipcRenderer.send('open-gallery');
@@ -187,22 +198,38 @@ const openGallery = () => {
   // });
 };
 
+const savePhoto = () => {
+  const source = viewRef.value!;
+  const imageUrl = source.toDataURL('image/jpeg');
+  lastPhoto.value = imageUrl;
+
+  ipcRenderer.send('save-image', imageUrl);
+  // const ctx = source.getContext('2d');
+  // ctx?.save();
+  // const photo = ctx?.getImageData(0, 0, source.width, source.height);
+};
 const handlePhotoClick = () => {
-  // const res = camera.pause();
+  audioShutter.value!.play();
+  camera.pause();
+  savePhoto();
+  setTimeout(() => {
+    camera.start();
+  }, 500);
   // console.log(res, '111111');
 };
+
 const handleBackgroundSettingClick = () => {
   dialogBackgroundVisible.value = true;
 };
 const handleAlbumlick = () => {
-  openGallery()
+  openGallery();
 };
 const handleAddBackgroundClick = () => {
   inputFile.value?.click();
 };
 
 const uploadImg = (event: any) => {
-  console.log(event, typeof event)
+  console.log(event, typeof event);
   const file = event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
@@ -240,11 +267,6 @@ const uploadImg = (event: any) => {
       display: inline-block;
     }
   }
-}
-
-.container {
-  display: flex;
-  flex: 1;
 }
 
 .camera {
@@ -296,7 +318,7 @@ const uploadImg = (event: any) => {
     align-items: center;
     height: 84px;
     justify-content: space-between;
-    padding: 12px;
+    padding: 2px 12px;
     .setting-btn {
       padding: 2px;
       outline: none;
@@ -355,6 +377,26 @@ const uploadImg = (event: any) => {
         opacity: 1;
         transition: all 0.3s ease;
       }
+    }
+    .left,
+    .right {
+      width: 30%;
+      display: flex;
+      align-items: center;
+    }
+    .right {
+      justify-content: end;
+    }
+  }
+  .photo-preview {
+    width: 150px;
+    height: 80px;
+    padding: 0 4px;
+    background-color: #dedede;
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
     }
   }
 }
