@@ -2,7 +2,7 @@
   <div class="camera">
     <div class="viewport" ref="viewport">
       <video id="video" ref="videoRef" playsinline :width="width" :height="height"></video>
-      <canvas style="display: none;" id="view" ref="viewRef"></canvas>
+      <canvas id="view" ref="viewRef"></canvas>
       <img id="background" v-show="!!selectedImage" :src="getUrl(selectedImage)" alt="" />
     </div>
     <div class="controls">
@@ -49,7 +49,13 @@
       >
         <img :src="getUrl(image)" alt="" />
       </div>
-      <div @click="selectImage('')" class="image-item" :class="{ 'selected-image': selectedImage === '' || imageList.length === 0 }">无背景</div>
+      <div
+        @click="selectImage('')"
+        class="image-item"
+        :class="{ 'selected-image': selectedImage === '' || imageList.length === 0 }"
+      >
+        无背景
+      </div>
     </div>
   </el-dialog>
   <audio src="/sound/camera-shutter.mp3" :loop="false" :volume="0.7" v-show="false" ref="audioShutter"></audio>
@@ -57,11 +63,11 @@
 <script setup lang="ts">
 import Camera from '@paddlejs-mediapipe/camera';
 import * as humanseg from '@paddlejs-models/humanseg';
-import { onMounted, ref, watchEffect } from 'vue';
+import { onMounted, onUnmounted, ref, watchEffect } from 'vue';
 import { useElementBounding } from '@vueuse/core';
 import { ElDialog, ElButton } from 'element-plus';
 
-let camera: Camera;
+let camera: Camera | null;
 const inputFile = ref<HTMLInputElement>();
 const videoRef = ref<HTMLVideoElement>();
 const viewRef = ref<HTMLCanvasElement>();
@@ -73,7 +79,7 @@ const dialogBackgroundVisible = ref<boolean>();
 const backgroundCanvas = document.createElement('canvas') as HTMLCanvasElement;
 const audioShutter = ref<HTMLAudioElement>();
 const lastPhoto = ref<string>();
-
+const cameraStart = ref<boolean>(false);
 window.ipcRenderer.on('receive', (event, data) => {
   console.log(event);
   imageList.value = data;
@@ -88,8 +94,8 @@ const selectImage = (image: string) => {
 };
 
 const keyDown = (event: KeyboardEvent) => {
-  console.log(event, 123123123)
-  if (!dialogBackgroundVisible.value) return
+  console.log(event, 123123123);
+  if (!dialogBackgroundVisible.value) return;
   const { code } = event;
   switch (code) {
     case 'ArrowLeft':
@@ -110,29 +116,29 @@ const keyDown = (event: KeyboardEvent) => {
 
 const changeImage = (code: string) => {
   if (imageList.value.length === 0) {
-    selectedImage.value = ''
-    return
+    selectedImage.value = '';
+    return;
   }
   if (selectedImage.value === '') {
     if (code === 'ArrowRight' || code === 'ArrowDown') {
-      selectedImage.value = imageList.value[0]
+      selectedImage.value = imageList.value[0];
     }
     if (code === 'ArrowLeft' || code === 'ArrowUp') {
-      selectedImage.value = imageList.value[imageList.value.length - 1]
+      selectedImage.value = imageList.value[imageList.value.length - 1];
     }
   } else {
     let index = imageList.value.findIndex((item) => item === selectedImage.value);
     if (index > -1) {
       if (code === 'ArrowRight' || code === 'ArrowDown') {
         if (index + 1 === imageList.value.length) {
-          selectedImage.value = ''
+          selectedImage.value = '';
         } else {
           selectedImage.value = imageList.value[index + 1];
         }
       }
       if (code === 'ArrowLeft' || code === 'ArrowUp') {
         if (index === 0) {
-          selectedImage.value = ""
+          selectedImage.value = '';
         } else {
           selectedImage.value = imageList.value[index - 1];
         }
@@ -161,7 +167,7 @@ function drawBackground(imgName: string) {
 }
 
 onMounted(async () => {
-  selectedImage.value = ""
+  selectedImage.value = '';
   document.addEventListener('keydown', function (event) {
     keyDown(event);
   });
@@ -169,46 +175,50 @@ onMounted(async () => {
   window.ipcRenderer.send('get-image-list');
 
   await humanseg.load(true, false);
-  // camera = new Camera(videoRef.value!, {
-  //   mirror: true,
-  //   enableOnInactiveState: true,
-  //   onFrame: async (video) => {
-  //     const view = viewRef.value!;
-  //     if (!!selectedImage.value) {
-  //       const { data } = await humanseg.getGrayValue(video);
-  //       humanseg.drawHumanSeg(data, view, backgroundCanvas);
-  //     } else {
-  //       view.width = video.width;
-  //       view.height = video.height;
-  //       view.getContext('2d')?.drawImage(video, 0, 0, video.width, video.height);
-  //     }
-  //   },
-  //   videoLoaded: () => {
-  //     camera.start();
-  //   },
-  // });
+  camera = new Camera(videoRef.value!, {
+    mirror: true,
+    enableOnInactiveState: true,
+    onSuccess: () => {
+      cameraStart.value = true;
+    },
+    onError: (e) => {
+      alert(e.message || '开启摄像头错误');
+    },
+    onFrame: async (video) => {
+      const view = viewRef.value!;
+      if (!!selectedImage.value) {
+        const { data } = await humanseg.getGrayValue(video);
+        humanseg.drawHumanSeg(data, view, backgroundCanvas);
+      } else {
+        view.width = video.width;
+        view.height = video.height;
+        view.getContext('2d')?.drawImage(video, 0, 0, video.width, video.height);
+      }
+    },
+    videoLoaded: () => {
+      camera!.start();
+    },
+  });
+});
+onUnmounted(() => {
+  camera?.pause();
+  camera = null;
+  cameraStart.value = false;
 });
 // const previewPhotoCanvas = document.createElement('canvas') as HTMLCanvasElement;
 const switchCamera = () => {
+  if (!cameraStart.value) {
+    alert('请先开启摄像头');
+  }
   camera?.switchCameras();
 };
 const openGallery = () => {
   window.ipcRenderer.send('open-gallery');
-  // window.ipcRenderer.on('selected-files', (event, files) => {
-  //   // 处理选中的文件
-  //   console.log(files);
-  //   // 例如，你可以在页面上显示图片
-  //   files.forEach(file => {
-  //     const img = document.createElement('img');
-  //     img.src = file;
-  //     document.body.appendChild(img);
-  //   });
-  // });
 };
 
 const savePhoto = () => {
   const source = viewRef.value!;
-  console.log(source, 11111)
+  console.log(source, 11111);
   const imageUrl = source.toDataURL('image/jpeg');
   lastPhoto.value = imageUrl;
 
@@ -218,13 +228,15 @@ const savePhoto = () => {
   // const photo = ctx?.getImageData(0, 0, source.width, source.height);
 };
 const handlePhotoClick = () => {
+  if (!camera || !cameraStart.value) {
+    return;
+  }
   audioShutter.value!.play();
-  camera.pause();
+  camera!.pause();
   savePhoto();
   setTimeout(() => {
-    camera.start();
+    camera!.start();
   }, 500);
-  // console.log(res, '111111');
 };
 
 const handleBackgroundSettingClick = () => {
