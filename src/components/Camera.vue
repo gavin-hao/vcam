@@ -169,24 +169,24 @@ onMounted(async () => {
   window.ipcRenderer.send('get-image-list');
 
   await humanseg.load(true, false);
-  // camera = new Camera(videoRef.value!, {
-  //   mirror: true,
-  //   enableOnInactiveState: true,
-  //   onFrame: async (video) => {
-  //     const view = viewRef.value!;
-  //     if (!!selectedImage.value) {
-  //       const { data } = await humanseg.getGrayValue(video);
-  //       humanseg.drawHumanSeg(data, view, backgroundCanvas);
-  //     } else {
-  //       view.width = video.width;
-  //       view.height = video.height;
-  //       view.getContext('2d')?.drawImage(video, 0, 0, video.width, video.height);
-  //     }
-  //   },
-  //   videoLoaded: () => {
-  //     camera.start();
-  //   },
-  // });
+  camera = new Camera(videoRef.value!, {
+    mirror: true,
+    enableOnInactiveState: true,
+    onFrame: async (video) => {
+      const view = viewRef.value!;
+      if (!!selectedImage.value) {
+        const { data } = await humanseg.getGrayValue(video);
+        humanseg.drawHumanSeg(data, view, backgroundCanvas);
+      } else {
+        view.width = video.width;
+        view.height = video.height;
+        view.getContext('2d')?.drawImage(video, 0, 0, video.width, video.height);
+      }
+    },
+    videoLoaded: () => {
+      camera.start();
+    },
+  });
 });
 // const previewPhotoCanvas = document.createElement('canvas') as HTMLCanvasElement;
 const switchCamera = () => {

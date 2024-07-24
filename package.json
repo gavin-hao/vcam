@@ -1,12 +1,16 @@
 {
   "name": "vcam",
   "private": true,
+  "description": "虚拟摄像机",
   "version": "0.0.0",
-  "type": "module",
+  "author": "哼哈二将",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc && vite build && electron-builder --win",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make"
   },
   "dependencies": {
     "@paddlejs-mediapipe/camera": "^0.0.4",
@@ -15,16 +19,24 @@
     "@paddlejs/paddlejs-backend-webgl": "^1.0.1",
     "@paddlejs/paddlejs-core": "^2.0.1",
     "@vueuse/core": "^10.11.0",
+    "electron-squirrel-startup": "^1.0.1",
     "element-plus": "^2.7.7",
     "vue": "^3.4.21"
   },
   "devDependencies": {
+    "@electron-forge/cli": "^7.4.0",
+    "@electron-forge/maker-deb": "^7.4.0",
+    "@electron-forge/maker-rpm": "^7.4.0",
+    "@electron-forge/maker-squirrel": "^7.4.0",
+    "@electron-forge/maker-zip": "^7.4.0",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.4.0",
+    "@electron-forge/plugin-fuses": "^7.4.0",
+    "@electron/fuses": "^1.8.0",
     "@types/webrtc": "^0.0.43",
     "@typescript-eslint/eslint-plugin": "^7.16.1",
     "@typescript-eslint/parser": "^7.16.1",
     "@vitejs/plugin-vue": "^5.0.4",
-    "electron": "^30.0.1",
-    "electron-builder": "^24.13.3",
+    "electron": "^22.3.27",
     "eslint": "^9.7.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.2.1",
