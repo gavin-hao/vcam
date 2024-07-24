@@ -344,7 +344,7 @@ const uploadImg = (event: any) => {
   }
 
   .controls {
-    flex: 0;
+    flex: auto;
     display: flex;
     align-items: center;
     height: 84px;
