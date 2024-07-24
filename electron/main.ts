@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, Menu } from 'electron';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -33,6 +33,8 @@ function createWindow() {
     },
   });
 
+  // process.env.NODE_ENV !== 'development' && Menu.setApplicationMenu(null);
+
   // Test active push message to Renderer-process.
   win.webContents.on('did-finish-load', () => {
     win?.webContents.send('main-process-message', new Date().toLocaleString());
@@ -65,6 +67,18 @@ app.on('activate', () => {
 });
 
 app.whenReady().then(createWindow);
+
+
+// 处理渲染进程发送的事件
+// ipcMain.on('open-gallery', () => {
+//   win && dialog.showOpenDialogSync(win, {
+//     properties: ['openFile', 'multiSelections'],
+//     defaultPath: path.join(MAIN_DIST, 'upload'),
+//     filters: [
+//       { name: 'Images', extensions: ['jpg', 'png', 'gif'] }
+//     ]
+//   })
+// });
 
 function createUpload() {
   console.error(1111);

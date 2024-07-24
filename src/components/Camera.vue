@@ -27,6 +27,7 @@
       </el-button>
     </div>
     <div class="image-list">
+      <div @click="selectImage('')" class="image-item" :class="{ 'selected-image': selectedImage === '' }">无背景</div>
       <div
         class="image-item"
         v-for="image in imageList"
@@ -42,7 +43,7 @@
 <script setup lang="ts">
 import Camera from '@paddlejs-mediapipe/camera';
 import * as humanseg from '@paddlejs-models/humanseg';
-import { onMounted, ref, watch, watchEffect } from 'vue';
+import { onMounted, ref, watchEffect } from 'vue';
 import { useElementBounding } from '@vueuse/core';
 import { ElDialog, ElButton } from 'element-plus';
 
@@ -53,7 +54,7 @@ const viewRef = ref<HTMLCanvasElement>();
 const viewport = ref<HTMLDivElement>();
 const { width, height } = useElementBounding(viewport);
 const imageList = ref<string[]>([]);
-const selectedImage = ref<string>();
+const selectedImage = ref<string>("");
 const dialogBackgroundVisible = ref<boolean>();
 const backgroundCanvas = ref<HTMLCanvasElement>(); //document.createElement('canvas') as HTMLCanvasElement;
 
@@ -103,24 +104,6 @@ const changeImage = (code: string) => {
   }
 };
 
-// watch(
-//   () => [selectedImage.value],
-//   () => {
-//     console.log(selectedImage.value, 12321312);
-//     const backCanvas = document.getElementById('back') as HTMLCanvasElement;
-//     if (!backCanvas) return;
-//     const ctx = backCanvas.getContext('2d');
-//     backCanvas.width = 640;
-//     backCanvas.height = 480;
-//     const img = new Image();
-//     img.onload = () => {
-//       ctx.drawImage(img, 0, 0, 640, 480);
-//     };
-//     img.src = getUrl(selectedImage.value);
-//     console.log(img, 'img');
-
-//   }
-// );
 watchEffect(() => {
   if (selectedImage.value) {
     drawBackground(selectedImage.value);
@@ -190,6 +173,20 @@ onMounted(async () => {
   });
 });
 
+const openGallery = () => {
+  window.ipcRenderer.send('open-gallery');
+  // window.ipcRenderer.on('selected-files', (event, files) => {
+  //   // 处理选中的文件
+  //   console.log(files);
+  //   // 例如，你可以在页面上显示图片
+  //   files.forEach(file => {
+  //     const img = document.createElement('img');
+  //     img.src = file;
+  //     document.body.appendChild(img);
+  //   });
+  // });
+};
+
 const handlePhotoClick = () => {
   // const res = camera.pause();
   // console.log(res, '111111');
@@ -197,7 +194,9 @@ const handlePhotoClick = () => {
 const handleBackgroundSettingClick = () => {
   dialogBackgroundVisible.value = true;
 };
-const handleAlbumlick = () => {};
+const handleAlbumlick = () => {
+  openGallery()
+};
 const handleAddBackgroundClick = () => {
   inputFile.value?.click();
 };
