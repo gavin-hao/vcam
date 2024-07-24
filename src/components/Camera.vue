@@ -1,26 +1,43 @@
 <template>
-  <!-- <div class="container"> -->
-  <!-- <div class="sidebar">
-      <input type="file" id="uploadImg" @input="uploadImg">
-      <div class="image-list" v-for="image in imageList" :key="image" @click="selectImage(image)">
-        <div class="image-item" :class="{ 'selected-image': image === selectedImage }">
-          <img width="200" height="150" :src="getUrl(image)" alt="">
-        </div>
-      </div>
-    </div> -->
   <div class="camera">
     <div class="viewport" ref="viewport">
       <video id="video" ref="videoRef" playsinline :width="width" :height="height"></video>
       <canvas id="view" ref="viewRef"></canvas>
-      <!-- <canvas id="background" ref="background" :width="width" :height="height"> </canvas> -->
+      <canvas id="background" ref="backgroundCanvas" :width="width" :height="height"> </canvas>
     </div>
     <div class="controls">
-      <div class="bg-switch"></div>
+      <div class="left">
+        <button class="setting-btn" aria-label="设置背景图" title="设置背景" @click="handleBackgroundSettingClick">
+          <img width="32" height="32" src="../assets/background-effect.svg" alt="" />
+        </button>
+      </div>
       <button class="camera-btn" @click="handlePhotoClick">拍照</button>
-      <div class="filter-effects"></div>
+      <div class="right">
+        <button class="setting-btn" title="相册" @click="handleAlbumlick">
+          <img width="32" height="32" src="../assets/photo-album.svg" alt="" />
+        </button>
+      </div>
     </div>
   </div>
-  <!-- </div> -->
+  <el-dialog v-model="dialogBackgroundVisible" title="设置背景图片">
+    <div class="upload-bg">
+      <el-button @click="handleAddBackgroundClick"
+        >添加背景图
+        <input type="file" id="uploadImg" ref="inputFile" @input="uploadImg" style="display: none" />
+      </el-button>
+    </div>
+    <div class="image-list">
+      <div
+        class="image-item"
+        v-for="image in imageList"
+        :key="image"
+        @click="selectImage(image)"
+        :class="{ 'selected-image': image === selectedImage }"
+      >
+        <img :src="getUrl(image)" alt="" />
+      </div>
+    </div>
+  </el-dialog>
 </template>
 <script setup lang="ts">
 import Camera from '@paddlejs-mediapipe/camera';
@@ -29,15 +46,17 @@ import { onMounted, ref, watch, watchEffect } from 'vue';
 // import image from '../assets/bg-imgs/bg_01.jpg';
 // import fs from 'fs';
 import { useElementBounding } from '@vueuse/core';
-
+import { ElDialog, ElButton } from 'element-plus';
 let camera: Camera;
+const inputFile = ref<HTMLInputElement>();
 const videoRef = ref<HTMLVideoElement>();
 const viewRef = ref<HTMLCanvasElement>();
 const viewport = ref<HTMLDivElement>();
 const { width, height } = useElementBounding(viewport);
 const imageList = ref<string[]>([]);
 const selectedImage = ref<string>();
-const backgroundCanvas = document.createElement('canvas') as HTMLCanvasElement;
+const dialogBackgroundVisible = ref<boolean>();
+const backgroundCanvas = ref<HTMLCanvasElement>(); //document.createElement('canvas') as HTMLCanvasElement;
 
 // const videoCanvas = document.createElement('canvas') as HTMLCanvasElement;
 // const videoCanvasCtx = videoCanvas.getContext('2d')!;
@@ -116,18 +135,14 @@ watchEffect(() => {
   }
 });
 function drawBackground(imgName: string) {
-  const ctx = backgroundCanvas.getContext('2d')!;
+  const ctx = backgroundCanvas.value?.getContext('2d')!;
   const backgroundImg = new Image();
   backgroundImg.src = getUrl(imgName);
   backgroundImg.onload = () => {
-    const imgWidth = backgroundImg.width || 1920;
-    const imgHeight = backgroundImg.height || 1080;
-    // var imgRect = containImg(0, 0, width.value, height.value, imgWidth, imgHeight);
-
-    ctx.drawImage(backgroundImg, 0, 0);
+    ctx?.drawImage(backgroundImg, 0, 0, backgroundCanvas.value!.width, backgroundCanvas.value!.height);
   };
 }
-function containImg(box_x: number, box_y: number, box_w: number, box_h: number, source_w: number, source_h: number) {
+function genImagSize(box_x: number, box_y: number, box_w: number, box_h: number, source_w: number, source_h: number) {
   var dx = box_x,
     dy = box_y,
     dWidth = box_w,
@@ -146,6 +161,8 @@ function containImg(box_x: number, box_y: number, box_w: number, box_h: number, 
     dHeight,
   };
 }
+const bgCanvas = document.createElement('canvas') as HTMLCanvasElement;
+
 onMounted(async () => {
   document.addEventListener('keydown', function (event) {
     keyDown(event);
@@ -159,10 +176,21 @@ onMounted(async () => {
     enableOnInactiveState: true,
     onFrame: async (video) => {
       const view = viewRef.value!;
-      view.width = video.width;
-      view.height = view.height;
+      // view.width = video.width;
+      // view.height = video.height;
+      var imgRect = genImagSize(
+        0,
+        0,
+        video.width,
+        video.height,
+        backgroundCanvas.value!.width,
+        backgroundCanvas.value!.height
+      );
+      bgCanvas
+        .getContext('2d')!
+        .drawImage(backgroundCanvas.value!, imgRect.dx, imgRect.dy, imgRect.dWidth, imgRect.dHeight);
       const { data } = await humanseg.getGrayValue(video);
-      humanseg.drawHumanSeg(data, view, backgroundCanvas);
+      humanseg.drawHumanSeg(data, view, bgCanvas);
     },
     videoLoaded: () => {
       camera.start();
@@ -174,7 +202,13 @@ const handlePhotoClick = () => {
   // const res = camera.pause();
   // console.log(res, '111111');
 };
-
+const handleBackgroundSettingClick = () => {
+  dialogBackgroundVisible.value = true;
+};
+const handleAlbumlick = () => {};
+const handleAddBackgroundClick = () => {
+  inputFile.value?.click();
+};
 const uploadImg = (event) => {
   const file = event.target.files[0];
   if (!file) return;
@@ -190,10 +224,31 @@ const uploadImg = (event) => {
 </script>
 <style lang="scss" scoped>
 .selected-image {
-  border: 1px solid blue;
+  border: 2px solid rgb(25, 84, 128);
 }
-
+.upload-bg {
+  margin-bottom: 12p;
+}
 .image-list {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+
+  overflow: auto;
+  flex-wrap: wrap;
+  .image-item {
+    width: 128px;
+    height: 72px;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    > img {
+      width: 100%;
+      height: auto;
+      object-fit: contain;
+      display: inline-block;
+    }
+  }
 }
 
 .container {
@@ -205,8 +260,8 @@ const uploadImg = (event) => {
   display: flex;
   flex-direction: column;
   flex: 1;
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
   position: relative;
   overflow: hidden;
 
@@ -217,6 +272,7 @@ const uploadImg = (event) => {
     flex: 1;
     background: #dedede;
     height: calc(100vh - 84px);
+    max-height: calc(100vh - 84px);
     position: relative;
     overflow: hidden;
     #video {
@@ -233,14 +289,14 @@ const uploadImg = (event) => {
       position: relative;
       z-index: 1;
     }
-    // #background {
-    //   position: absolute;
-    //   top: 0;
-    //   left: 0;
-    //   object-fit: fill;
-    //   z-index: -1;
-    //   opacity: 0.5;
-    // }
+    #background {
+      position: absolute;
+      top: 0;
+      left: 0;
+      object-fit: fill;
+      z-index: -1;
+      opacity: 0.5;
+    }
   }
 
   .controls {
@@ -250,6 +306,13 @@ const uploadImg = (event) => {
     height: 84px;
     justify-content: space-between;
     padding: 12px;
+    .setting-btn {
+      padding: 2px;
+      outline: none;
+      &:focus {
+        outline: none;
+      }
+    }
 
     .camera-btn {
       margin: 0;
