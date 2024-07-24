@@ -33,7 +33,7 @@ function createWindow() {
     },
   });
 
-  // process.env.NODE_ENV !== 'development' && Menu.setApplicationMenu(null);
+  process.env.NODE_ENV !== 'development' && Menu.setApplicationMenu(null);
 
   // Test active push message to Renderer-process.
   win.webContents.on('did-finish-load', () => {
@@ -70,15 +70,15 @@ app.whenReady().then(createWindow);
 
 
 // 处理渲染进程发送的事件
-// ipcMain.on('open-gallery', () => {
-//   win && dialog.showOpenDialogSync(win, {
-//     properties: ['openFile', 'multiSelections'],
-//     defaultPath: path.join(MAIN_DIST, 'upload'),
-//     filters: [
-//       { name: 'Images', extensions: ['jpg', 'png', 'gif'] }
-//     ]
-//   })
-// });
+ipcMain.on('open-gallery', () => {
+  win && dialog.showOpenDialogSync(win, {
+    properties: ['openFile', 'multiSelections'],
+    defaultPath: path.join(MAIN_DIST, 'upload'),
+    filters: [
+      { name: 'Images', extensions: ['jpg', 'png', 'gif'] }
+    ]
+  })
+});
 
 function createUpload() {
   console.error(1111);
