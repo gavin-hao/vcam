@@ -43,10 +43,9 @@
 import Camera from '@paddlejs-mediapipe/camera';
 import * as humanseg from '@paddlejs-models/humanseg';
 import { onMounted, ref, watch, watchEffect } from 'vue';
-// import image from '../assets/bg-imgs/bg_01.jpg';
-// import fs from 'fs';
 import { useElementBounding } from '@vueuse/core';
 import { ElDialog, ElButton } from 'element-plus';
+
 let camera: Camera;
 const inputFile = ref<HTMLInputElement>();
 const videoRef = ref<HTMLVideoElement>();
@@ -58,30 +57,23 @@ const selectedImage = ref<string>();
 const dialogBackgroundVisible = ref<boolean>();
 const backgroundCanvas = ref<HTMLCanvasElement>(); //document.createElement('canvas') as HTMLCanvasElement;
 
-// const videoCanvas = document.createElement('canvas') as HTMLCanvasElement;
-// const videoCanvasCtx = videoCanvas.getContext('2d')!;
-
-ipcRenderer.on('receive', (event, data) => {
-  console.log(data, 88888); // 输出: 这是主进程的数据
-  imageList.value = data;
-  selectedImage.value = data[0];
+window.ipcRenderer.on('receive', (event, data) => {
+  console.log(event)
+  imageList.value = data
+  selectedImage.value = data[0]
 });
 
-const getUrl = (image) => {
-  return '/dist-electron/upload/' + image;
-};
+const getUrl = (image: string) => {
+  return '../dist-electron/upload/' + image
+}
 
-const selectImage = (image) => {
-  selectedImage.value = image;
-};
+const selectImage = (image: string) => {
+  selectedImage.value = image
+}
 
-const arrowDown = () => {
-  console.log('arrowDown');
-};
-
-const keyDown = (event) => {
-  console.log(event);
-  const { code, shiftKey, ctrlKey } = event;
+const keyDown = (event: KeyboardEvent) => {
+  console.log(event)
+  const { code } = event
   switch (code) {
     case 'ArrowDown':
     case 'ArrowUp':
@@ -96,8 +88,8 @@ const keyDown = (event) => {
   }
 };
 
-const changeImage = (code) => {
-  let index = imageList.value.findIndex((item) => item === selectedImage.value);
+const changeImage = (code: string) => {
+  let index = imageList.value.findIndex((item) => item === selectedImage.value)
   if (index > -1) {
     if (code === 'ArrowDown') {
       index = index + 1 === imageList.value.length ? index : index + 1;
@@ -209,15 +201,15 @@ const handleAlbumlick = () => {};
 const handleAddBackgroundClick = () => {
   inputFile.value?.click();
 };
-const uploadImg = (event) => {
+
+const uploadImg = (event: any) => {
+  console.log(event, typeof event)
   const file = event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = (e) => {
     // 发送文件到主进程处理
-    console.log(1111, e.target.result);
-
-    window.ipcRenderer.send('upload-file', e.target.result, file.name);
+    window.ipcRenderer.send('upload-file', e.target?.result, file.name);
   };
   reader.readAsArrayBuffer(file);
 };
