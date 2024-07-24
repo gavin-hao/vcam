@@ -6,7 +6,7 @@ declare module '@paddlejs-mediapipe/camera' {
     enableOnInactiveState?: boolean;
     targetCanvas?: HTMLCanvasElement;
     onSuccess?: () => void;
-    onError?: () => void;
+    onError?: (err: any) => void;
     onNotSupported?: () => void;
     onFrame?: (target: HTMLCanvasElement | HTMLVideoElement) => void;
     switchError?: () => void;

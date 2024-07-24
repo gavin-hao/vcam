@@ -67,6 +67,9 @@ import { onMounted, onUnmounted, ref, watchEffect } from 'vue';
 import { useElementBounding } from '@vueuse/core';
 import { ElDialog, ElButton } from 'element-plus';
 
+import * as tfjs from '@tensorflow/tfjs';
+import * as bodyPix from '@tensorflow-models/body-pix';
+
 let camera: Camera | null;
 const inputFile = ref<HTMLInputElement>();
 const videoRef = ref<HTMLVideoElement>();
@@ -80,6 +83,9 @@ const backgroundCanvas = document.createElement('canvas') as HTMLCanvasElement;
 const audioShutter = ref<HTMLAudioElement>();
 const lastPhoto = ref<string>();
 const cameraStart = ref<boolean>(false);
+
+let net: bodyPix.BodyPix;
+
 window.ipcRenderer.on('receive', (event, data) => {
   console.log(event);
   imageList.value = data;
@@ -166,6 +172,35 @@ function drawBackground(imgName: string) {
   };
 }
 
+function genImageSize(box_x: number, box_y: number, box_w: number, box_h: number, source_w: number, source_h: number) {
+  var dx = box_x,
+    dy = box_y,
+    dWidth = box_w,
+    dHeight = box_h;
+  if (source_w > source_h || (source_w == source_h && box_w < box_h)) {
+    dHeight = (source_h * dWidth) / source_w;
+    dy = box_y + (box_h - dHeight) / 2;
+  } else if (source_w < source_h || (source_w == source_h && box_w > box_h)) {
+    dWidth = (source_w * dHeight) / source_h;
+    dx = box_x + (box_w - dWidth) / 2;
+  }
+  return {
+    dx,
+    dy,
+    dWidth,
+    dHeight,
+  };
+}
+function renderImageDataToCanvas(image: ImageData, canvas: HTMLCanvasElement | OffscreenCanvas) {
+  canvas.width = image.width;
+  canvas.height = image.height;
+  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+
+  ctx.putImageData(image, 0, 0);
+  return canvas;
+}
+const modelUrl = '/bodypix-tfjs-075-stride16/model.json';
+const maskCanvas = document.createElement('canvas');
 onMounted(async () => {
   selectedImage.value = '';
   document.addEventListener('keydown', function (event) {
@@ -173,8 +208,15 @@ onMounted(async () => {
   });
 
   window.ipcRenderer.send('get-image-list');
-
-  await humanseg.load(true, false);
+  await tfjs.ready();
+  net = await bodyPix.load({
+    architecture: 'MobileNetV1',
+    outputStride: 16,
+    quantBytes: 4,
+    multiplier: 0.75,
+    modelUrl,
+  });
+  // await humanseg.load(true, false);
   camera = new Camera(videoRef.value!, {
     mirror: true,
     enableOnInactiveState: true,
@@ -185,10 +227,38 @@ onMounted(async () => {
       alert(e.message || '开启摄像头错误');
     },
     onFrame: async (video) => {
+      if (video.width <= 0 || video.height <= 0) {
+        return;
+      }
       const view = viewRef.value!;
+      let context = view.getContext('2d')!;
+
+      const foregroundColor = { r: 0, g: 0, b: 0, a: 0 };
+      const backgroundColor = { r: 0, g: 0, b: 0, a: 255 };
       if (!!selectedImage.value) {
-        const { data } = await humanseg.getGrayValue(video);
-        humanseg.drawHumanSeg(data, view, backgroundCanvas);
+        const segmentation = await net.segmentPerson(video!, {
+          flipHorizontal: true,
+          internalResolution: 'high',
+          segmentationThreshold: 0.8,
+        });
+        const maskImage = bodyPix.toMask(segmentation, foregroundColor, backgroundColor, true);
+        view.width = maskImage.width;
+        view.height = maskImage.height;
+        context.save();
+        context.globalAlpha = 1;
+        if (maskImage) {
+          //绘制人像遮照
+          const mask = renderImageDataToCanvas(maskImage, maskCanvas);
+          // const blurredMask = drawAndBlurImageOnOffScreenCanvas(mask, maskBlurAmount, CANVAS_NAMES.blurredMask);
+          context.drawImage(mask, 0, 0, video.width, video.height);
+        }
+        context.restore();
+        context.globalCompositeOperation = 'source-in'; //新图形只在新图形和目标画布重叠的地方绘制。其他的都是透明的。
+        var imgRect = genImageSize(0, 0, view.width, view.height, backgroundCanvas.width, backgroundCanvas.height);
+        context.drawImage(backgroundCanvas, imgRect.dx, imgRect.dy, imgRect.dWidth, imgRect.dHeight);
+        context.globalCompositeOperation = 'destination-over'; // 新图形只在不重合的区域绘制
+        context.drawImage(video, 0, 0, video.width, video.height);
+        context.globalCompositeOperation = 'source-over'; // 恢复
       } else {
         view.width = video.width;
         view.height = video.height;
