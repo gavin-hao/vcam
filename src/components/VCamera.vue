@@ -62,7 +62,6 @@
 </template>
 <script setup lang="ts">
 import Camera from '@paddlejs-mediapipe/camera';
-import * as humanseg from '@paddlejs-models/humanseg';
 import { onMounted, onUnmounted, ref, watchEffect } from 'vue';
 import { useElementBounding } from '@vueuse/core';
 import { ElDialog, ElButton } from 'element-plus';

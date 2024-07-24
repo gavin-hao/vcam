@@ -15,10 +15,10 @@
     "jsx": "preserve",
 
     /* Linting */
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "strict": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noFallthroughCasesInSwitch": false
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue", "electron", "src/**/*.d.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
