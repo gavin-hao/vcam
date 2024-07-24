@@ -348,6 +348,7 @@ const uploadImg = (event: any) => {
     display: flex;
     align-items: center;
     height: 84px;
+    max-height: 84px;
     justify-content: space-between;
     padding: 2px 12px;
     .setting-btn {
