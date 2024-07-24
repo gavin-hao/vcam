@@ -94,8 +94,8 @@ const selectImage = (image: string) => {
 };
 
 const keyDown = (event: KeyboardEvent) => {
-  console.log(event, 123123123);
-  if (!dialogBackgroundVisible.value) return;
+  // console.log(event, 123123123);
+  // if (!dialogBackgroundVisible.value) return;
   const { code } = event;
   switch (code) {
     case 'ArrowLeft':
