@@ -14,6 +14,9 @@
     "@paddlejs-models/humanseg": "1.2.0",
     "@paddlejs/paddlejs-backend-webgl": "^1.0.1",
     "@paddlejs/paddlejs-core": "^2.0.1",
+    "@tensorflow-models/body-pix": "^2.2.1",
+    "@tensorflow/tfjs": "^4.20.0",
+    "@tensorflow/tfjs-converter": "^4.20.0",
     "@vueuse/core": "^10.11.0",
     "element-plus": "^2.7.7",
     "vue": "^3.4.21"
