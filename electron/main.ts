@@ -27,6 +27,8 @@ let win: BrowserWindow | null;
 
 function createWindow() {
   win = new BrowserWindow({
+    width: 1280,
+    height: 720,
     icon: path.join(process.env.VITE_PUBLIC, 'vcam.svg'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
