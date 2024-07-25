@@ -1,10 +1,9 @@
 const { FusesPlugin } = require('@electron-forge/plugin-fuses');
 const { FuseV1Options, FuseVersion } = require('@electron/fuses');
-const path = require("node:path")
+
 module.exports = {
   packagerConfig: {
     asar: true,
-    icon: path.join(__dirname, 'vcam2') // 不需要文件扩展名
   },
   rebuildConfig: {},
   makers: [

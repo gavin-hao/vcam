@@ -26,16 +26,17 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 
 let win: BrowserWindow | null;
 
 function createWindow() {
+  console.log(VITE_DEV_SERVER_URL, MAIN_DIST, RENDERER_DIST, __dirname, 1111)
   win = new BrowserWindow({
     width: 1280,
     height: 720,
-    icon: path.join(process.env.VITE_PUBLIC, 'vcam.svg'),
+    icon: path.join(RENDERER_DIST, 'vcam2.ico'),
     webPreferences: {
+      webSecurity: false,
       preload: path.join(__dirname, 'preload.mjs'),
     },
   });
 
-  console.log(process.env, 111111)
   process.env.NODE_ENV !== 'development' && Menu.setApplicationMenu(null);
 
   // Test active push message to Renderer-process.
@@ -80,19 +81,24 @@ app.whenReady().then(() => {
 ipcMain.on('open-gallery', () => {
   mkdirDir('photo')
   shell.openPath(path.join(process.env.TEMP || __dirname, 'vcam', 'photo'))
-  // win && dialog.showOpenDialogSync(win, {
-  //   properties: ['openDirectory'],
-  //   defaultPath: path.join(process.env.TEMP || __dirname, 'vcam', 'photo'),
-  //   filters: [
-  //     { name: 'Images', extensions: ['jpg', 'png', 'gif'] }
-  //   ]
-  // })
+});
+
+ipcMain.on('delete-image', (event, image) => {
+  fs.unlink(image, (err) => {
+    if (err) {
+      console.error('文件删除失败:', err);
+      return;
+    }
+    getMessageList(event);
+    console.log('文件删除成功');
+  });
 });
 
 function mkdirDir(name: string) {
   let directory
   if (name === 'background') {
-    directory = path.join(__dirname, 'upload');
+    directory = path.join(process.env.TEMP || __dirname, 'vcam', name);
+    // directory = path.join(__dirname, 'upload');
   } else {
     directory = path.join(process.env.TEMP || __dirname, 'vcam', name);
   }
@@ -102,6 +108,13 @@ function mkdirDir(name: string) {
         if (mkdirErr) {
           console.error(mkdirErr);
           return;
+        } else {
+          fs.chmod(directory, 0o777, (error) => {
+            if (error) {
+              return console.error(`设置权限出错: ${error}`);
+            }
+            console.log('权限设置成功');
+          });
         }
       });
     }
@@ -112,7 +125,8 @@ ipcMain.on('upload-file', (event, fileData, fileName) => {
   console.log(99999999);
   const buffer = Buffer.from(fileData);
   mkdirDir('background');
-  const filePath = path.join(__dirname, 'upload', fileName.replace(/^.+?\./, new Date().getTime() + '.'));
+  const filePath = path.join(process.env.TEMP || __dirname, 'vcam', 'background', fileName.replace(/^.+?\./, new Date().getTime() + '.'));
+  // const filePath = path.join(__dirname, 'upload', fileName.replace(/^.+?\./, new Date().getTime() + '.'));
   console.log(filePath, 'fi');
   fs.writeFile(filePath, buffer, (err) => {
     if (err) {
@@ -138,7 +152,8 @@ ipcMain.on('save-image', (event, imageData, fileName) => {
 });
 
 function getMessageList(event: any) {
-  const directoryPath = path.join(__dirname, 'upload'); // 替换为你的文件夹路径
+  const directoryPath = path.join(process.env.TEMP || __dirname, 'vcam', 'background');
+  // const directoryPath = path.join(__dirname, 'upload'); // 替换为你的文件夹路径
   fs.readdir(directoryPath, (err, files) => {
     if (err) {
       return console.log('读取文件夹出错:', err);
@@ -146,12 +161,8 @@ function getMessageList(event: any) {
     const exts = ['.jpg', '.jpeg', '.png', '.webp'];
     const imgs = files.filter((file) => {
       return !/(^|\/)\.[^\/\.]/g.test(file) && exts.includes(path.extname(file));
-    });
+    }).map((img) =>  directoryPath + '/' + img);
     event.reply('receive', imgs);
-
-    // event.reply('receive', files.map((item) => path.join(__dirname, 'upload', item)))
-    console.log(imgs, 111111111111111);
-    // ipcMain.emit('imageList', files)
   });
 }
 
