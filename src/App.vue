@@ -9,7 +9,7 @@
 
 <script setup lang="ts">
   import { computed } from 'vue';
-  import Camera from './components/Camera.vue';
+  import Camera from './components/VCamera.vue';
   
   const overtime = computed(() => {
     return new Date() > new Date('2024-08-15')

@@ -39,30 +39,51 @@
         <input type="file" id="uploadImg" ref="inputFile" @input="uploadImg" style="display: none" />
       </el-button>
     </div>
-    <div class="image-list">
-      <div
-        class="image-item"
-        v-for="image in imageList"
-        :key="image"
-        @click="selectImage(image)"
-        :class="{ 'selected-image': image === selectedImage }"
-      >
-        <img :src="getUrl(image)" alt="" />
+    <div class="image-container">
+      <div class="title">系统图片</div>
+      <div class="image-list">
+        <div
+          class="image-item"
+          v-for="image in systemImage()"
+          :key="image"
+          @click="selectImage(image)"
+          :class="{ 'selected-image': image === selectedImage }"
+        >
+          <img :src="getUrl(image)" alt="" />
+        </div>
       </div>
-      <div
-        @click="selectImage('')"
-        class="image-item"
-        :class="{ 'selected-image': selectedImage === '' || imageList.length === 0 }"
-      >
-        无背景
+    </div>
+    <div class="image-container">
+      <div class="title">自定义图片</div>
+      <div class="image-list image-custom">
+        <div
+          class="image-item"
+          v-for="image in customImage()"
+          :key="image"
+          @click="selectImage(image)"
+          :class="{ 'selected-image': image === selectedImage }"
+        >
+          <img :src="getUrl(image)" alt="" />
+        </div>
+        <div
+          @click="selectImage('')"
+          class="image-item"
+          :class="{ 'selected-image': selectedImage === '' || imageList.length === 0 }"
+        >
+          无背景
+        </div>
       </div>
+    </div>
+    <div class="footer">
+      <el-button @click="deleteImage" :disabled="selectedImageIsSystem">删除</el-button>
+      <el-button @click="closeDialog">关闭</el-button>
     </div>
   </el-dialog>
   <audio src="/sound/camera-shutter.mp3" :loop="false" :volume="0.7" v-show="false" ref="audioShutter"></audio>
 </template>
 <script setup lang="ts">
 import Camera from '@paddlejs-mediapipe/camera';
-import { onMounted, onUnmounted, ref, watchEffect } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watchEffect } from 'vue';
 import { useElementBounding } from '@vueuse/core';
 import { ElDialog, ElButton } from 'element-plus';
 
@@ -87,11 +108,32 @@ let net: bodyPix.BodyPix;
 
 window.ipcRenderer.on('receive', (event, data) => {
   console.log(event);
-  imageList.value = data;
+  imageList.value = systemImage().concat(data);
 });
 
+const selectedImageIsSystem = computed(() => {
+  return !selectedImage.value || systemImage().includes(selectedImage.value)
+})
+
+const deleteImage = () => {
+  if (selectedImage.value) {
+    window.ipcRenderer.send('delete-image', selectedImage.value);
+  }
+}
+
+const customImage = () => {
+  return imageList.value.filter((i) => !systemImage().includes(i))
+}
+
+const systemImage = () => {
+  return ['0001.jpg', '0002.jpg', '0003.jpg', '0004.jpg']
+}
+
 const getUrl = (image: string) => {
-  return '../dist-electron/upload/' + image;
+  if (systemImage().includes(image)) {
+    return '../dist-electron/upload/' + image;
+  }
+  return image;
 };
 
 const selectImage = (image: string) => {
@@ -99,8 +141,6 @@ const selectImage = (image: string) => {
 };
 
 const keyDown = (event: KeyboardEvent) => {
-  // console.log(event, 123123123);
-  // if (!dialogBackgroundVisible.value) return;
   const { code } = event;
   switch (code) {
     case 'ArrowLeft':
@@ -308,6 +348,10 @@ const handlePhotoClick = () => {
   }, 500);
 };
 
+const closeDialog = () => {
+  dialogBackgroundVisible.value = false;
+}
+
 const handleBackgroundSettingClick = () => {
   dialogBackgroundVisible.value = true;
 };
@@ -322,6 +366,10 @@ const uploadImg = (event: any) => {
   console.log(event, typeof event);
   const file = event.target.files[0];
   if (!file) return;
+  if (!file.type.startsWith('image/')) {
+    inputFile.value.value = '';
+    alert('请上传图片文件！');
+  }
   const reader = new FileReader();
   reader.onload = (e) => {
     // 发送文件到主进程处理
@@ -332,16 +380,23 @@ const uploadImg = (event: any) => {
 </script>
 <style lang="scss" scoped>
 .selected-image {
-  border: 2px solid rgb(25, 84, 128);
+  border: 2px solid aquamarine;
+  width: 124px !important;
+  height: 68px !important;
 }
 .upload-bg {
   margin-bottom: 12p;
+}
+.image-container {
+  .title {
+    padding: 10px 0;  
+  }
 }
 .image-list {
   display: flex;
   flex-direction: row;
   align-items: center;
-  min-height: 200px;
+  min-height: 100px;
 
   overflow: auto;
   flex-wrap: wrap;
@@ -503,5 +558,8 @@ const uploadImg = (event: any) => {
 }
 .el-dialog__body {
   height: 600px;
+}
+.footer {
+  text-align: right;
 }
 </style>
