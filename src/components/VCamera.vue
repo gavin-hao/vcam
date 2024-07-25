@@ -118,6 +118,7 @@ const selectedImageIsSystem = computed(() => {
 const deleteImage = () => {
   if (selectedImage.value) {
     window.ipcRenderer.send('delete-image', selectedImage.value);
+    selectedImage.value = "";
   }
 }
 
@@ -238,7 +239,7 @@ function renderImageDataToCanvas(image: ImageData, canvas: HTMLCanvasElement | O
   ctx.putImageData(image, 0, 0);
   return canvas;
 }
-const modelUrl = '/bodypix-tfjs-075-stride16/model.json';
+const modelUrl = '../dist/bodypix-tfjs-075-stride16/model.json';
 const maskCanvas = document.createElement('canvas');
 onMounted(async () => {
   selectedImage.value = '';

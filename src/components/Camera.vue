@@ -113,6 +113,7 @@ const selectedImageIsSystem = computed(() => {
 const deleteImage = () => {
   if (selectedImage.value) {
     window.ipcRenderer.send('delete-image', selectedImage.value);
+    selectedImage.value = "";
   }
 }
 
