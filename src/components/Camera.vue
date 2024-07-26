@@ -216,7 +216,9 @@ onMounted(async () => {
 
   window.ipcRenderer.send('get-image-list');
 
-  await humanseg.load(true, false);
+  const modelUrl = '../model/398X224.json';
+
+  await humanseg.load(true, false, modelUrl);
   camera = new Camera(videoRef.value!, {
     mirror: true,
     enableOnInactiveState: true,

@@ -998,10 +998,12 @@
   dependencies:
     undici-types "~5.26.4"
 
-"@types/node@^16.11.26":
-  version "16.18.104"
-  resolved "https://registry.npmmirror.com/@types/node/-/node-16.18.104.tgz#33d5f4886c54133af0ff02445e57c5254025ee53"
-  integrity sha512-OF3keVCbfPlkzxnnDBUZJn1RiCJzKeadjiW0xTEb0G1SUJ5gDVb3qnzZr2T4uIFvsbKJbXy1v2DN7e2zaEY7jQ==
+"@types/node@^20.9.0":
+  version "20.14.12"
+  resolved "https://registry.npmmirror.com/@types/node/-/node-20.14.12.tgz#129d7c3a822cb49fc7ff661235f19cfefd422b49"
+  integrity sha512-r7wNXakLeSsGT0H1AU863vS2wa5wBOK4bWMjZz2wj+8nBx+m5PeIn0k8AloSLpRuiwdRQZwarZqHE4FNArPuJQ==
+  dependencies:
+    undici-types "~5.26.4"
 
 "@types/offscreencanvas@~2019.3.0":
   version "2019.3.0"
@@ -2257,13 +2259,13 @@ electron-winstaller@^5.3.0:
   optionalDependencies:
     "@electron/windows-sign" "^1.1.2"
 
-electron@^22.3.27:
-  version "22.3.27"
-  resolved "https://registry.npmmirror.com/electron/-/electron-22.3.27.tgz#b77451a53f0c502e7559cceac28ac58eb289eef8"
-  integrity sha512-7Rht21vHqj4ZFRnKuZdFqZFsvMBCmDqmjetiMqPtF+TmTBiGne1mnstVXOA/SRGhN2Qy5gY5bznJKpiqogjM8A==
+electron@^30.0.1:
+  version "30.3.1"
+  resolved "https://registry.npmmirror.com/electron/-/electron-30.3.1.tgz#fe27ca2a4739bec832b2edd6f46140ab46bf53a0"
+  integrity sha512-Ai/OZ7VlbFAVYMn9J5lyvtr+ZWyEbXDVd5wBLb5EVrp4352SRmMAmN5chcIe3n9mjzcgehV9n4Hwy15CJW+YbA==
   dependencies:
     "@electron/get" "^2.0.0"
-    "@types/node" "^16.11.26"
+    "@types/node" "^20.9.0"
     extract-zip "^2.0.1"
 
 element-plus@^2.7.7:
