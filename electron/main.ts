@@ -33,7 +33,7 @@ function createWindow() {
     icon: path.join(RENDERER_DIST, 'vcam2.ico'),
     webPreferences: {
       webSecurity: false,
-      preload: path.join(__dirname, 'preload.mjs'),
+      preload: path.join(__dirname, 'preload.js'),
     },
   });
 
@@ -41,7 +41,7 @@ function createWindow() {
 
   // Test active push message to Renderer-process.
   win.webContents.on('did-finish-load', () => {
-    win?.webContents.send('main-process-message', new Date().toLocaleString());
+    win?.webContents.send('load-finish', process.env.VITE_PUBLIC);
   });
 
   if (VITE_DEV_SERVER_URL) {

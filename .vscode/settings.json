@@ -70,7 +70,8 @@
   "typescript.tsdk": "node_modules/typescript/lib",
   "cSpell.words": [
     "asar",
-    "humanseg"
+    "humanseg",
+    "vite"
   ]
   //stylelint   -----settings end-----
 }

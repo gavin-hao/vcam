@@ -90,6 +90,7 @@ import { ElDialog, ElButton } from 'element-plus';
 import * as tfjs from '@tensorflow/tfjs';
 import * as bodyPix from '@tensorflow-models/body-pix';
 
+
 let camera: Camera | null;
 const inputFile = ref<HTMLInputElement>();
 const videoRef = ref<HTMLVideoElement>();
@@ -132,7 +133,7 @@ const systemImage = () => {
 
 const getUrl = (image: string) => {
   if (systemImage().includes(image)) {
-    return '../dist-electron/upload/' + image;
+    return '../assets/bg-imgs/' + image;
   }
   return image;
 };
@@ -239,7 +240,7 @@ function renderImageDataToCanvas(image: ImageData, canvas: HTMLCanvasElement | O
   ctx.putImageData(image, 0, 0);
   return canvas;
 }
-const modelUrl = '../dist/bodypix-tfjs-075-stride16/model.json';
+const modelUrl = '../model-tfjs/model.json';
 const maskCanvas = document.createElement('canvas');
 onMounted(async () => {
   selectedImage.value = '';

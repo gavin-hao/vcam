@@ -10,13 +10,7 @@
         <button class="setting-btn" aria-label="设置背景图" title="设置背景" @click="handleBackgroundSettingClick">
           <img width="32" height="32" src="../assets/background-effect.svg" alt="" />
         </button>
-        <button
-          class="setting-btn"
-          style="margin-left: 20px"
-          aria-label="重制摄像头"
-          title="重制摄像头"
-          @click="switchCamera"
-        >
+        <button class="setting-btn" style="margin-left: 20px" aria-label="重制摄像头" title="重制摄像头" @click="switchCamera">
           <img width="16" height="16" src="../assets/camera.svg" alt="" />
         </button>
       </div>
@@ -34,21 +28,15 @@
   </div>
   <el-dialog width="80%" height="80%" class="back-dialog" v-model="dialogBackgroundVisible" title="设置背景图片">
     <div class="upload-bg">
-      <el-button @click="handleAddBackgroundClick"
-        >添加背景图
+      <el-button @click="handleAddBackgroundClick">添加背景图
         <input type="file" id="uploadImg" ref="inputFile" @input="uploadImg" style="display: none" />
       </el-button>
     </div>
     <div class="image-container">
       <div class="title">系统图片</div>
       <div class="image-list">
-        <div
-          class="image-item"
-          v-for="image in systemImage()"
-          :key="image"
-          @click="selectImage(image)"
-          :class="{ 'selected-image': image === selectedImage }"
-        >
+        <div class="image-item" v-for="image in systemImage()" :key="image" @click="selectImage(image)"
+          :class="{ 'selected-image': image === selectedImage }">
           <img :src="getUrl(image)" alt="" />
         </div>
       </div>
@@ -56,20 +44,12 @@
     <div class="image-container">
       <div class="title">自定义图片</div>
       <div class="image-list image-custom">
-        <div
-          class="image-item"
-          v-for="image in customImage()"
-          :key="image"
-          @click="selectImage(image)"
-          :class="{ 'selected-image': image === selectedImage }"
-        >
+        <div class="image-item" v-for="image in customImage()" :key="image" @click="selectImage(image)"
+          :class="{ 'selected-image': image === selectedImage }">
           <img :src="getUrl(image)" alt="" />
         </div>
-        <div
-          @click="selectImage('')"
-          class="image-item"
-          :class="{ 'selected-image': selectedImage === '' || imageList.length === 0 }"
-        >
+        <div @click="selectImage('')" class="image-item"
+          :class="{ 'selected-image': selectedImage === '' || imageList.length === 0 }">
           无背景
         </div>
       </div>
@@ -84,11 +64,12 @@
 <script setup lang="ts">
 import Camera from '@paddlejs-mediapipe/camera';
 import * as humanseg from '@paddlejs-models/humanseg';
-import { computed, onMounted, onUnmounted, ref, watchEffect } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watchEffect } from 'vue';
 import { useElementBounding } from '@vueuse/core';
 import { ElDialog, ElButton } from 'element-plus';
 
 let camera: Camera | null;
+const vitePublic = ref<string>();
 const inputFile = ref<HTMLInputElement>();
 const videoRef = ref<HTMLVideoElement>();
 const viewRef = ref<HTMLCanvasElement>();
@@ -122,16 +103,8 @@ const customImage = () => {
 }
 
 const systemImage = () => {
-  return ['0001.jpg', '0002.jpg', '0003.jpg', '0004.jpg']
+  return ['0001.jpg', '0002.jpg', '0003.jpg', '0004.jpg', '0005.jpg', '0006.jpg']
 }
-
-const getUrl = (image: string) => {
-  if (systemImage().includes(image)) {
-    return '../dist-electron/upload/' + image;
-
-  }
-  return image;
-};
 
 const selectImage = (image: string) => {
   selectedImage.value = image;
@@ -208,42 +181,53 @@ function drawBackground(imgName: string) {
   };
 }
 
+const getUrl = (image: string) => {
+  if (systemImage().includes(image)) {
+    console.log(vitePublic.value, 111)
+    return vitePublic.value.includes('public') ? `../bg-imgs/${image}` : `../dist/bg-imgs/${image}`
+  }
+  return image;
+};
+
+window.ipcRenderer.on('load-finish', async (_event, _vitePublic) => {
+vitePublic.value = _vitePublic
+const modelUrl = vitePublic.value.includes('public') ? '../model-ppseg/398X224.json' : `${vitePublic.value}/model-ppseg/398X224.json`;
+await humanseg.load(true, false, modelUrl);
+camera = new Camera(videoRef.value!, {
+  mirror: true,
+  enableOnInactiveState: true,
+  onSuccess: () => {
+    cameraStart.value = true;
+  },
+  onError: (e) => {
+    alert(e.message || '开启摄像头错误');
+  },
+  onFrame: async (video) => {
+    const view = viewRef.value!;
+    if (!!selectedImage.value) {
+      const { data } = await humanseg.getGrayValue(video);
+      humanseg.drawHumanSeg(data, view, backgroundCanvas);
+    } else {
+      view.width = video.width;
+      view.height = video.height;
+      view.getContext('2d')?.drawImage(video, 0, 0, video.width, video.height);
+    }
+  },
+  videoLoaded: () => {
+    camera!.start();
+  },
+});
+});
+
 onMounted(async () => {
+  console.log(123123)
   selectedImage.value = '';
   document.addEventListener('keydown', function (event) {
     keyDown(event);
   });
-
   window.ipcRenderer.send('get-image-list');
+})
 
-  const modelUrl = '../model/398X224.json';
-
-  await humanseg.load(true, false, modelUrl);
-  camera = new Camera(videoRef.value!, {
-    mirror: true,
-    enableOnInactiveState: true,
-    onSuccess: () => {
-      cameraStart.value = true;
-    },
-    onError: (e) => {
-      alert(e.message || '开启摄像头错误');
-    },
-    onFrame: async (video) => {
-      const view = viewRef.value!;
-      if (!!selectedImage.value) {
-        const { data } = await humanseg.getGrayValue(video);
-        humanseg.drawHumanSeg(data, view, backgroundCanvas);
-      } else {
-        view.width = video.width;
-        view.height = video.height;
-        view.getContext('2d')?.drawImage(video, 0, 0, video.width, video.height);
-      }
-    },
-    videoLoaded: () => {
-      camera!.start();
-    },
-  });
-});
 onUnmounted(() => {
   camera?.pause();
   camera = null;
@@ -309,20 +293,22 @@ const uploadImg = (event: any) => {
 };
 </script>
 <style lang="scss" scoped>
-
 .selected-image {
   border: 2px solid aquamarine;
   width: 124px !important;
   height: 68px !important;
 }
+
 .upload-bg {
   margin-bottom: 12p;
 }
+
 .image-container {
   .title {
-    padding: 10px 0;  
+    padding: 10px 0;
   }
 }
+
 .image-list {
   display: flex;
   flex-direction: row;
@@ -331,6 +317,7 @@ const uploadImg = (event: any) => {
 
   overflow: auto;
   flex-wrap: wrap;
+
   .image-item {
     align-items: center;
     justify-content: center;
@@ -343,7 +330,8 @@ const uploadImg = (event: any) => {
     align-items: center;
     padding: 4px;
     margin: 4px;
-    > img {
+
+    >img {
       width: 100%;
       height: 100%;
       object-fit: contain;
@@ -371,6 +359,7 @@ const uploadImg = (event: any) => {
     max-height: calc(100vh - 84px);
     position: relative;
     overflow: hidden;
+
     #video {
       position: absolute;
       top: 0;
@@ -386,6 +375,7 @@ const uploadImg = (event: any) => {
       z-index: 1;
       // opacity: 0;
     }
+
     #background {
       position: absolute;
       top: 0;
@@ -406,9 +396,11 @@ const uploadImg = (event: any) => {
     max-height: 84px;
     justify-content: space-between;
     padding: 2px 12px;
+
     .setting-btn {
       padding: 2px;
       outline: none;
+
       &:focus {
         outline: none;
       }
@@ -465,21 +457,25 @@ const uploadImg = (event: any) => {
         transition: all 0.3s ease;
       }
     }
+
     .left,
     .right {
       width: 30%;
       display: flex;
       align-items: center;
     }
+
     .right {
       justify-content: end;
     }
   }
+
   .photo-preview {
     width: 150px;
     height: 80px;
     padding: 0 4px;
     background-color: #dedede;
+
     img {
       width: 100%;
       height: 100%;
@@ -487,9 +483,11 @@ const uploadImg = (event: any) => {
     }
   }
 }
+
 .el-dialog__body {
   height: 600px;
 }
+
 .footer {
   text-align: right;
 }
