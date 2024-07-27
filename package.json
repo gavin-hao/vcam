@@ -4,7 +4,7 @@
   "description": "An Electron application with Vue and TypeScript",
   "main": "./out/main/index.js",
   "author": "example.com",
-  "homepage": "https://electron-vite.org",
+  "type": "module",
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts,.vue --fix",
@@ -22,7 +22,15 @@
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.0",
-    "@electron-toolkit/utils": "^3.0.0"
+    "@electron-toolkit/utils": "^3.0.0",
+    "@element-plus/icons-vue": "^2.3.1",
+    "@paddlejs-mediapipe/camera": "^0.0.4",
+    "@paddlejs-models/humanseg": "1.2.0",
+    "@vueuse/core": "^10.11.0",
+    "element-plus": "^2.7.7",
+    "fs-extra": "^11.2.0",
+    "mousetrap": "^1.6.5",
+    "prettier": "^3.3.3"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config": "^1.0.2",
@@ -38,9 +46,12 @@
     "electron-vite": "^2.3.0",
     "eslint": "^8.57.0",
     "eslint-plugin-vue": "^9.26.0",
-    "prettier": "^3.3.2",
+    "postcss": "^8.4.40",
+    "postcss-html": "^1.7.0",
+    "sass": "^1.77.8",
     "typescript": "^5.5.2",
     "vite": "^5.3.1",
+    "vite-svg-loader": "^5.1.0",
     "vue": "^3.4.30",
     "vue-tsc": "^2.0.22"
   }

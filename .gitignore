@@ -3,3 +3,8 @@ dist
 out
 .DS_Store
 *.log*
+# app created dir
+.vcam
+resources/bgimgs
+resources/photos
+resources/.vcam

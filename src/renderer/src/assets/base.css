@@ -48,6 +48,16 @@ body {
   color: var(--color-text);
   background: var(--color-background);
   line-height: 1.6;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  min-height: 100vh;
+  min-width: 320px;
+  display: flex;
+  flex-direction: column;
+  * {
+    box-sizing: border-box;
+  }
   font-family:
     Inter,
     -apple-system,
@@ -64,4 +74,17 @@ body {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
 }
