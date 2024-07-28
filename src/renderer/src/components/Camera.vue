@@ -28,7 +28,8 @@ import BackgroundDialog from './BackgroundDialog.vue';
 import Control from './Contols.vue';
 import Camera from '@paddlejs-mediapipe/camera';
 import * as Mousetrap from 'mousetrap';
-import * as humanseg from '@paddlejs-models/humanseg/lib/index_gpu';
+//import * as humanseg from '@paddlejs-models/humanseg/lib/index_gpu';
+import * as humanseg from '../paddle/index_gpu';
 import { computed, onMounted, ref, watchEffect } from 'vue';
 import { useElementBounding, useEventListener, useTimeout } from '@vueuse/core';
 import shutterMp3 from '../assets/camera-shutter.mp3?asset';
@@ -84,7 +85,7 @@ onMounted(async () => {
     return;
   }
   console.log(modelUrl, 'modelUrl')
-  await humanseg.load(true, false, modelUrl);
+  await humanseg.load({}, modelUrl);
   camera = new Camera(videoRef.value!, {
     mirror: true,
     enableOnInactiveState: true,
