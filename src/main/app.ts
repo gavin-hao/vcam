@@ -114,11 +114,13 @@ const getModels = async () => {
   let modelAbsolutePaths = paths.map((p) => {
     return { path: path.resolve(modelBaseDir, p), key: p };
   });
+  console.log(modelAbsolutePaths, process.env['ELECTRON_RENDERER_URL'],'paths')
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     modelAbsolutePaths = modelAbsolutePaths.map((p) => {
-      return { path: path.join('/@fs/', p.path), key: p.key };
+      return { path: process.env['ELECTRON_RENDERER_URL'] + path.join('/@fs/', p.path), key: p.key };
     });
   }
+  console.log(modelAbsolutePaths, 1111)
   return modelAbsolutePaths;
 };
 export default class Application {
@@ -131,6 +133,6 @@ export default class Application {
     ipcMain.on(ipcMessage.savePhoto, (_event, base64) => savePhoto(base64));
     ipcMain.on(ipcMessage.openPhotosDir, () => openPhotosDirectory());
     ipcMain.on(ipcMessage.getBackgroundImages, () => getBackgroundImages(this.mainWindow));
-    ipcMain.handle(ipcMessage.getModleFiles, () => getModels());
+    ipcMain.handle(ipcMessage.getModelFiles, () => getModels());
   }
 }

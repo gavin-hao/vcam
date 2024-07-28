@@ -28,7 +28,7 @@ import BackgroundDialog from './BackgroundDialog.vue';
 import Control from './Contols.vue';
 import Camera from '@paddlejs-mediapipe/camera';
 import * as Mousetrap from 'mousetrap';
-import * as humanseg from '@paddlejs-models/humanseg';
+import * as humanseg from '@paddlejs-models/humanseg/lib/index_gpu';
 import { computed, onMounted, ref, watchEffect } from 'vue';
 import { useElementBounding, useEventListener, useTimeout } from '@vueuse/core';
 import shutterMp3 from '../assets/camera-shutter.mp3?asset';
@@ -54,7 +54,7 @@ window.api.onBackgroundImageUpdate((imgs) => {
   bgImgs.value = imgs;
 });
 const currentBackground = ref<string>();
-const modelConfig = ref<string>('ppseg-398x224');
+const modelConfig = ref<string>('ppsegv2');
 const clsHideControl = ref<string>();
 const { start: startTimer, stop: stopTimer } = useTimeout(5000, {
   controls: true,
@@ -74,7 +74,7 @@ onMounted(async () => {
     onKeyboardShortcuts(combo);
   });
   await window.api.getBackgroundImages();
-  models.value = (await window.api.getModleFiles()) || [];
+  models.value = (await window.api.getModelFiles()) || [];
   if (!models.value) {
     alert('加载模型错误');
     return;
@@ -83,6 +83,7 @@ onMounted(async () => {
   if (!modelUrl) {
     return;
   }
+  console.log(modelUrl, 'modelUrl')
   await humanseg.load(true, false, modelUrl);
   camera = new Camera(videoRef.value!, {
     mirror: true,
@@ -96,8 +97,7 @@ onMounted(async () => {
     onFrame: async (video) => {
       const view = viewRef.value!;
       if (!!currentBackground.value) {
-        const { data } = await humanseg.getGrayValue(video);
-        humanseg.drawHumanSeg(data, view, backgroundCanvas);
+        humanseg.drawHumanSeg(video, view, backgroundCanvas);
       } else {
         view.width = video.width;
         view.height = video.height;

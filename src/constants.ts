@@ -5,5 +5,5 @@ export const ipcMessage = {
   savePhoto: 'api:savePhoto',
   getBackgroundImages: 'api:getBackgroundImages',
   onBackgroundImageUpdate: 'api:onBackgroundImageUpdate',
-  getModleFiles: 'api:getModleFiles',
+  getModelFiles: 'api:getModelFiles',
 } as const;

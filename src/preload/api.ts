@@ -8,6 +8,6 @@ export const api = {
   getBackgroundImages: () => ipcRenderer.send(ipcMessage.getBackgroundImages),
   onBackgroundImageUpdate: (callback: (filePaths: BackgroundImages) => void) =>
     ipcRenderer.on(ipcMessage.onBackgroundImageUpdate, (_event, value: BackgroundImages) => callback(value)),
-  getModleFiles: () => ipcRenderer.invoke(ipcMessage.getModleFiles),
+  getModelFiles: () => ipcRenderer.invoke(ipcMessage.getModelFiles),
   openPhotosDir: () => ipcRenderer.send(ipcMessage.openPhotosDir),
 } as const;
