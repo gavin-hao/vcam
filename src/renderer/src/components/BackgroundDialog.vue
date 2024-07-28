@@ -10,33 +10,57 @@
     <div class="upload-bg">
       <el-button @click="handleAddBackgroundClick">添加背景图 </el-button>
     </div>
-    <div class="image-list">
-      <div
-        class="image-item"
-        v-for="image in images"
-        :key="image"
-        @click="selectImage(image)"
-        :class="{ 'selected-image': image === selected }"
-      >
-        <img :src="image" alt="" />
+    <div class="image-container">
+      <div class="title">系统图片</div>
+      <div class="image-list">
+        <div class="image-item" v-for="image in images.default" :key="image" @click="selectImage(image)"
+          :class="{ 'selected-image': image === selected }">
+          <img :src="image" alt="" />
+        </div>
       </div>
-      <div @click="selectImage('')" class="image-item" :class="{ 'selected-image': !selected || images.length === 0 }">
-        无背景
+    </div>
+    <div class="image-container">
+      <div class="title">自定义图片</div>
+      <div class="image-list image-custom">
+        <div class="image-item" v-for="image in images.user" :key="image" @click="selectImage(image)"
+          :class="{ 'selected-image': image === selected }">
+          <img :src="image" alt="" />
+        </div>
+        <div @click="selectImage('')" class="image-item"
+          :class="{ 'selected-image': selected === '' }">
+          无背景
+        </div>
       </div>
+    </div>
+    <div class="dialog-footer">
+      <el-button @click="deleteImage" :disabled="selectedImageIsSystem">删除</el-button>
+      <el-button @click="onClose">关闭</el-button>
     </div>
   </el-dialog>
 </template>
 <script setup lang="ts">
 import { ElDialog, ElButton } from 'element-plus';
-defineProps<{
-  images: string[];
+import { computed } from 'vue';
+
+const props = defineProps<{
+  images: { default: string[]; user: string[] };
   selected?: string;
   modelValue?: boolean;
 }>();
 const emits = defineEmits<{
+  (e: 'deleteImage'): void;
   (e: 'change', url?: string): void;
   (e: 'update:modelValue', visible: boolean): void;
 }>();
+
+const selectedImageIsSystem = computed(() => {
+  return !props.selected || props.images.default.includes(props.selected)
+})
+
+const deleteImage = () => {
+  console.log(1111222)
+  emits('deleteImage')
+}
 
 const handleAddBackgroundClick = async () => {
   await window.api.addBackgroundImage();
@@ -55,14 +79,21 @@ const onClose = () => {
 .upload-bg {
   margin-bottom: 12p;
 }
+.image-container {
+  .title {
+    padding: 10px 0;
+  }
+}
+
 .image-list {
   display: flex;
   flex-direction: row;
   align-items: center;
-  min-height: 200px;
+  min-height: 100px;
 
   overflow: auto;
   flex-wrap: wrap;
+
   .image-item {
     align-items: center;
     justify-content: center;
@@ -75,12 +106,16 @@ const onClose = () => {
     align-items: center;
     padding: 4px;
     margin: 4px;
-    > img {
+
+    >img {
       width: 100%;
       height: 100%;
       object-fit: contain;
       display: inline-block;
     }
   }
+}
+.dialog-footer {
+  text-align: right;
 }
 </style>

@@ -123,6 +123,20 @@ const getModels = async () => {
   console.log(modelAbsolutePaths, 1111)
   return modelAbsolutePaths;
 };
+const deleteImage = (mainWindow: BrowserWindow, image: string) => {
+  console.log(image, 111111111111)
+  // if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+  //   image = process.env['ELECTRON_RENDERER_URL'] + image
+  // }
+  fs.unlink(image, (err) => {
+    if (err) {
+      console.error('文件删除失败:', err);
+      return;
+    }
+    getBackgroundImages(mainWindow)
+    console.log('文件删除成功');
+  });
+}
 export default class Application {
   mainWindow: BrowserWindow;
   constructor(mainWindow: BrowserWindow) {
@@ -134,5 +148,6 @@ export default class Application {
     ipcMain.on(ipcMessage.openPhotosDir, () => openPhotosDirectory());
     ipcMain.on(ipcMessage.getBackgroundImages, () => getBackgroundImages(this.mainWindow));
     ipcMain.handle(ipcMessage.getModelFiles, () => getModels());
+    ipcMain.on(ipcMessage.deleteImage, (_event, image) => deleteImage(this.mainWindow, image))
   }
 }

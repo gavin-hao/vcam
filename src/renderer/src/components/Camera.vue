@@ -16,7 +16,8 @@
       />
     </div>
     <BackgroundDialog
-      :images="allBgImgs"
+      :images="bgImgs"
+      @deleteImage="deleteImage"
       :selected="currentBackground"
       v-model="dialogBackgroundVisible"
       @change="handleBackgroundChanged"
@@ -40,7 +41,7 @@ const videoRef = ref<HTMLVideoElement>();
 const controlRef = ref<HTMLDivElement>();
 // import { ElDialog, ElButton } from 'element-plus';
 const { width, height } = useElementBounding(viewport);
-const bgImgs = ref<{ default: string[]; user: string[] }>();
+const bgImgs = ref<{ default: string[]; user: string[] }>({default: [], user: []});
 let camera: Camera | null;
 const dialogBackgroundVisible = ref<boolean>(false);
 const backgroundCanvas = document.createElement('canvas') as HTMLCanvasElement;
@@ -124,6 +125,15 @@ const handlePhotoClick = () => {
     camera!.start();
   }, 500);
 };
+
+const deleteImage = () => {
+  console.log(999999999)
+  if (currentBackground.value) {
+    window.api.deleteImage(currentBackground.value);
+    currentBackground.value = "";
+  }
+}
+
 const handleOpenBackgroundDialog = () => {
   dialogBackgroundVisible.value = true;
 };

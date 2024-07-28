@@ -5,8 +5,8 @@ import icon from '../../resources/icon.png?asset';
 import Application from './app';
 
 let mainWindow: BrowserWindow;
-const WIDTH = import.meta.env.MAIN_VITE_window_width;
-const HEIGHT = import.meta.env.MAIN_VITE_window_height;
+// const WIDTH = import.meta.env.MAIN_VITE_window_width;
+// const HEIGHT = import.meta.env.MAIN_VITE_window_height;
 // console.log(import.meta.env, WIDTH, HEIGHT);
 function createWindow(): void {
   // console.log('import.meta', import.meta)

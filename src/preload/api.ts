@@ -10,4 +10,5 @@ export const api = {
     ipcRenderer.on(ipcMessage.onBackgroundImageUpdate, (_event, value: BackgroundImages) => callback(value)),
   getModelFiles: () => ipcRenderer.invoke(ipcMessage.getModelFiles),
   openPhotosDir: () => ipcRenderer.send(ipcMessage.openPhotosDir),
+  deleteImage: (image: string) => ipcRenderer.send(ipcMessage.deleteImage, image)
 } as const;
