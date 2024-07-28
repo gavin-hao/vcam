@@ -9,7 +9,6 @@ let mainWindow: BrowserWindow;
 // const HEIGHT = import.meta.env.MAIN_VITE_window_height;
 // console.log(import.meta.env, WIDTH, HEIGHT);
 function createWindow(): void {
-  // console.log('import.meta', import.meta)
   // Create the browser window.
   mainWindow = new BrowserWindow({
     width: 1280,

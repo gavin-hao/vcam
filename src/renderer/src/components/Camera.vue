@@ -1,25 +1,25 @@
 <template>
   <div class="camera">
-    <div class="viewport" ref="viewport">
+    <div ref="viewport" class="viewport">
       <video id="video" ref="videoRef" playsinline :width="width" :height="height"></video>
       <canvas id="view" ref="viewRef"></canvas>
-      <img id="background" v-show="!!currentBackground" :src="currentBackground" alt="" />
-      <audio :src="shutterMp3" :loop="false" :volume="0.7" v-show="false" ref="audioShutter"></audio>
+      <img v-show="!!currentBackground" id="background" :src="currentBackground" alt="" />
+      <audio v-show="false" ref="audioShutter" :src="shutterMp3" :loop="false" :volume="0.7"></audio>
     </div>
-    <div class="footer" :class="clsHideControl" ref="controlRef">
+    <div ref="controlRef" class="footer" :class="clsHideControl">
       <Control
         :photo="lastPhoto"
-        @switchCamera="switchCamera"
+        @switch-camera="switchCamera"
         @shutter-click="handlePhotoClick"
-        @openBackgroundDialog="handleOpenBackgroundDialog"
-        @openAlbum="handleOpenAlbum"
+        @open-background-dialog="handleOpenBackgroundDialog"
+        @open-album="handleOpenAlbum"
       />
     </div>
     <BackgroundDialog
-      :images="bgImgs"
-      @deleteImage="deleteImage"
-      :selected="currentBackground"
       v-model="dialogBackgroundVisible"
+      :images="bgImgs"
+      :selected="currentBackground"
+      @delete-image="deleteImage"
       @change="handleBackgroundChanged"
     />
   </div>
@@ -41,7 +41,7 @@ const videoRef = ref<HTMLVideoElement>();
 const controlRef = ref<HTMLDivElement>();
 // import { ElDialog, ElButton } from 'element-plus';
 const { width, height } = useElementBounding(viewport);
-const bgImgs = ref<{ default: string[]; user: string[] }>({default: [], user: []});
+const bgImgs = ref<{ default: string[]; user: string[] }>({ default: [], user: [] });
 let camera: Camera | null;
 const dialogBackgroundVisible = ref<boolean>(false);
 const backgroundCanvas = document.createElement('canvas') as HTMLCanvasElement;
@@ -85,7 +85,6 @@ onMounted(async () => {
   if (!modelUrl) {
     return;
   }
-  console.log(modelUrl, 'modelUrl')
   await humanseg.load({}, modelUrl);
   camera = new Camera(videoRef.value!, {
     mirror: true,
@@ -98,7 +97,7 @@ onMounted(async () => {
     },
     onFrame: async (video) => {
       const view = viewRef.value!;
-      if (!!currentBackground.value) {
+      if (currentBackground.value) {
         humanseg.drawHumanSeg(video, view, backgroundCanvas);
       } else {
         view.width = video.width;
@@ -127,12 +126,11 @@ const handlePhotoClick = () => {
 };
 
 const deleteImage = () => {
-  console.log(999999999)
   if (currentBackground.value) {
     window.api.deleteImage(currentBackground.value);
-    currentBackground.value = "";
+    currentBackground.value = '';
   }
-}
+};
 
 const handleOpenBackgroundDialog = () => {
   dialogBackgroundVisible.value = true;

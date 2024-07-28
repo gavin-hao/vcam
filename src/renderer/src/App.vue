@@ -8,12 +8,12 @@
 </template>
 
 <script setup lang="ts">
-  import { computed } from 'vue';
-  import Camera from './components/Camera.vue';
-  
-  const overtime = computed(() => {
-    return new Date() > new Date('2024-08-15')
-  })
+import { computed } from 'vue';
+import Camera from './components/Camera.vue';
+
+const overtime = computed(() => {
+  return new Date() > new Date('2024-09-30');
+});
 </script>
 
 <style scoped>

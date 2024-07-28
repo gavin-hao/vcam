@@ -3,9 +3,9 @@
     width="80%"
     height="80%"
     class="back-dialog"
-    :modelValue="modelValue"
-    @close="onClose"
+    :model-value="modelValue"
     title="设置背景图片"
+    @close="onClose"
   >
     <div class="upload-bg">
       <el-button @click="handleAddBackgroundClick">添加背景图 </el-button>
@@ -13,8 +13,13 @@
     <div class="image-container">
       <div class="title">系统图片</div>
       <div class="image-list">
-        <div class="image-item" v-for="image in images.default" :key="image" @click="selectImage(image)"
-          :class="{ 'selected-image': image === selected }">
+        <div
+          v-for="image in images.default"
+          :key="image"
+          class="image-item"
+          :class="{ 'selected-image': image === selected }"
+          @click="selectImage(image)"
+        >
           <img :src="image" alt="" />
         </div>
       </div>
@@ -22,18 +27,20 @@
     <div class="image-container">
       <div class="title">自定义图片</div>
       <div class="image-list image-custom">
-        <div class="image-item" v-for="image in images.user" :key="image" @click="selectImage(image)"
-          :class="{ 'selected-image': image === selected }">
+        <div
+          v-for="image in images.user"
+          :key="image"
+          class="image-item"
+          :class="{ 'selected-image': image === selected }"
+          @click="selectImage(image)"
+        >
           <img :src="image" alt="" />
         </div>
-        <div @click="selectImage('')" class="image-item"
-          :class="{ 'selected-image': selected === '' }">
-          无背景
-        </div>
+        <div class="image-item" :class="{ 'selected-image': selected === '' }" @click="selectImage('')">无背景</div>
       </div>
     </div>
     <div class="dialog-footer">
-      <el-button @click="deleteImage" :disabled="selectedImageIsSystem">删除</el-button>
+      <el-button :disabled="selectedImageIsSystem" @click="deleteImage">删除</el-button>
       <el-button @click="onClose">关闭</el-button>
     </div>
   </el-dialog>
@@ -54,13 +61,12 @@ const emits = defineEmits<{
 }>();
 
 const selectedImageIsSystem = computed(() => {
-  return !props.selected || props.images.default.includes(props.selected)
-})
+  return !props.selected || props.images.default.includes(props.selected);
+});
 
 const deleteImage = () => {
-  console.log(1111222)
-  emits('deleteImage')
-}
+  emits('deleteImage');
+};
 
 const handleAddBackgroundClick = async () => {
   await window.api.addBackgroundImage();
@@ -107,7 +113,7 @@ const onClose = () => {
     padding: 4px;
     margin: 4px;
 
-    >img {
+    > img {
       width: 100%;
       height: 100%;
       object-fit: contain;

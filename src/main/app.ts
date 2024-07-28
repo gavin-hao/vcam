@@ -54,7 +54,7 @@ const setBackgroundImage = async (mainWindow: BrowserWindow) => {
     return;
   }
   fs.ensureDirSync(backgroundPath);
-  for (let f of filePaths) {
+  for (const f of filePaths) {
     const bf = fs.readFileSync(f);
     const ext = path.extname(f);
     const filename = `${getHash(bf)}${ext}`;
@@ -101,7 +101,6 @@ const getBackgroundImages = async (mainWindow: BrowserWindow) => {
     default: defaultImgPaths,
     user: userImgPaths,
   };
-  console.log(imgs);
 
   mainWindow.webContents.send(ipcMessage.onBackgroundImageUpdate, imgs);
 };
@@ -114,17 +113,14 @@ const getModels = async () => {
   let modelAbsolutePaths = paths.map((p) => {
     return { path: path.resolve(modelBaseDir, p), key: p };
   });
-  console.log(modelAbsolutePaths, process.env['ELECTRON_RENDERER_URL'],'paths')
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     modelAbsolutePaths = modelAbsolutePaths.map((p) => {
       return { path: process.env['ELECTRON_RENDERER_URL'] + path.join('/@fs/', p.path), key: p.key };
     });
   }
-  console.log(modelAbsolutePaths, 1111)
   return modelAbsolutePaths;
 };
 const deleteImage = (mainWindow: BrowserWindow, image: string) => {
-  console.log(image, 111111111111)
   // if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
   //   image = process.env['ELECTRON_RENDERER_URL'] + image
   // }
@@ -133,10 +129,10 @@ const deleteImage = (mainWindow: BrowserWindow, image: string) => {
       console.error('文件删除失败:', err);
       return;
     }
-    getBackgroundImages(mainWindow)
+    getBackgroundImages(mainWindow);
     console.log('文件删除成功');
   });
-}
+};
 export default class Application {
   mainWindow: BrowserWindow;
   constructor(mainWindow: BrowserWindow) {
@@ -148,6 +144,6 @@ export default class Application {
     ipcMain.on(ipcMessage.openPhotosDir, () => openPhotosDirectory());
     ipcMain.on(ipcMessage.getBackgroundImages, () => getBackgroundImages(this.mainWindow));
     ipcMain.handle(ipcMessage.getModelFiles, () => getModels());
-    ipcMain.on(ipcMessage.deleteImage, (_event, image) => deleteImage(this.mainWindow, image))
+    ipcMain.on(ipcMessage.deleteImage, (_event, image) => deleteImage(this.mainWindow, image));
   }
 }
