@@ -70,7 +70,21 @@ useEventListener(controlRef, 'mouseenter', (_evt) => {
 useEventListener(controlRef, 'mouseleave', (_evt) => {
   startTimer?.();
 });
+async function getVideoInputs() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+    console.log('enumerateDevices() not supported.');
+    return [];
+  }
+
+  const devices = await navigator.mediaDevices.enumerateDevices();
+
+  const videoDevices = devices.filter((device) => device.kind === 'videoinput');
+
+  return videoDevices;
+}
 onMounted(async () => {
+  const inputs = await getVideoInputs();
+  console.log(inputs);
   Mousetrap.bind(['up', 'down', 'pageup', 'pagedown', 'left', 'right', 'enter', 'tab', 'space'], function (_e, combo) {
     onKeyboardShortcuts(combo);
   });
@@ -84,7 +98,7 @@ onMounted(async () => {
   if (!modelUrl) {
     return;
   }
-  console.log(modelUrl, 'modelUrl')
+  console.log(modelUrl, 'modelUrl');
   await humanseg.load({}, modelUrl);
   camera = new Camera(videoRef.value!, {
     mirror: true,

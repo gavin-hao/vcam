@@ -30,7 +30,8 @@
     "element-plus": "^2.7.7",
     "fs-extra": "^11.2.0",
     "mousetrap": "^1.6.5",
-    "prettier": "^3.3.3"
+    "prettier": "^3.3.3",
+    "stats.js": "^0.17.0"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config": "^1.0.2",
