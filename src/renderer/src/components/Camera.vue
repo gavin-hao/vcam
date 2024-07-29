@@ -98,7 +98,10 @@ onMounted(async () => {
     onFrame: async (video) => {
       const view = viewRef.value!;
       if (currentBackground.value) {
-        humanseg.drawHumanSeg(video, view, backgroundCanvas);
+        // await humanseg.drawMask(video, view, backgroundCanvas);
+        // await humanseg.drawHumanSeg(video, view);
+        await humanseg.drawHumanSeg(video, view, backgroundCanvas);
+        // humanseg.drawHumanSeg(video, view, backgroundCanvas);
       } else {
         view.width = video.width;
         view.height = video.height;

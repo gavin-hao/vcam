@@ -14,6 +14,7 @@ function createWindow(): void {
     width: 1280,
     height: 720,
     show: false,
+    icon: '../../build/icon.ico',
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
