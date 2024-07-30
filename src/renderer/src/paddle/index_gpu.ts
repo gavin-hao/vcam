@@ -31,6 +31,7 @@ const WEBGL_ATTRIBUTES = Object.assign({}, GLHelper.WEBGL_ATTRIBUTES, {
 
 function createWebglContext(canvas: HTMLCanvasElement) {
   let gl = canvas.getContext('webgl2', WEBGL_ATTRIBUTES) as WebGLRenderingContext | null;
+  console.log(gl, 'gllll');
   if (gl) {
     env.set('webglVersion', 2);
   } else {
@@ -160,6 +161,26 @@ export async function drawMask(
   destCtx.drawImage(gl.canvas, -backgroundSize.bx, -backgroundSize.by, backgroundSize.bw, backgroundSize.bh);
 }
 
+// function genImageSize2(box_x: number, box_y: number, box_w: number, box_h: number, source_w: number, source_h: number) {
+//   const dx = box_x,
+//     dy = box_y,
+//     dWidth = box_w,
+//     dHeight = box_h;
+//   if (source_w > source_h || (source_w == source_h && box_w < box_h)) {
+//     dHeight = (source_h * dWidth) / source_w;
+//     dy = box_y + (box_h - dHeight) / 2;
+//   } else if (source_w < source_h || (source_w == source_h && box_w > box_h)) {
+//     dWidth = (source_w * dHeight) / source_h;
+//     dx = box_x + (box_w - dWidth) / 2;
+//   }
+//   return {
+//     dx,
+//     dy,
+//     dWidth,
+//     dHeight,
+//   };
+// }
+
 function genBackgroundSize(inputElement) {
   // 缩放后的宽高
   let sw = WIDTH;
@@ -167,6 +188,7 @@ function genBackgroundSize(inputElement) {
   const ratio = sw / sh;
   const inputWidth = inputElement.naturalWidth || inputElement.width;
   const inputHeight = inputElement.naturalHeight || inputElement.height;
+  console.log(inputWidth, inputHeight, 123123123);
   let x = 0;
   let y = 0;
   let bx = 0;
@@ -175,6 +197,8 @@ function genBackgroundSize(inputElement) {
   let bw = inputWidth;
   const origin_ratio = inputWidth / inputHeight;
   // target的长宽比大些 就把原图的高变成target那么高
+
+  console.log(ratio / origin_ratio);
   if (ratio / origin_ratio >= 1) {
     sw = sh * origin_ratio;
     x = Math.floor((WIDTH - sw) / 2);
@@ -188,6 +212,16 @@ function genBackgroundSize(inputElement) {
     bh = bw / ratio;
     by = Math.floor((bh - inputHeight) / 2);
   }
+  console.log({
+    x,
+    y,
+    sw,
+    sh,
+    bx,
+    by,
+    bw,
+    bh,
+  });
   return {
     x,
     y,
