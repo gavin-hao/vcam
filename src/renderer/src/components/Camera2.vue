@@ -27,23 +27,18 @@
 <script setup lang="ts">
 import BackgroundDialog from './BackgroundDialog.vue';
 import Control from './Contols.vue';
-// import Camera from '@paddlejs-mediapipe/camera';
 import * as Mousetrap from 'mousetrap';
-//import * as humanseg from '@paddlejs-models/humanseg/lib/index_gpu';
 import * as humanseg from '../paddle/index_gpu';
 import { computed, onMounted, ref, watchEffect } from 'vue';
-import { useElementBounding, useEventListener, useTimeout } from '@vueuse/core';
+import { useElementBounding } from '@vueuse/core';
 import shutterMp3 from '../assets/camera-shutter.mp3?asset';
 import useCamera from './useCamera';
 import useAutoHide from './useAutoHide';
 const viewport = ref<HTMLDivElement>();
-// const controlRef = ref<HTMLDivElement>();
 const { outputCanvas, videoElement, cameras, switchCamera, updateBackground, takePhoto } = useCamera();
 const { container: controlRef } = useAutoHide();
-// import { ElDialog, ElButton } from 'element-plus';
 const { width, height } = useElementBounding(viewport);
 const bgImgs = ref<{ default: string[]; user: string[] }>();
-// let camera: Camera | null;
 const dialogBackgroundVisible = ref<boolean>(false);
 const audioShutter = ref<HTMLAudioElement>();
 const lastPhoto = ref<string>();
@@ -132,21 +127,9 @@ const handleOpenAlbum = () => {
 };
 watchEffect(() => {
   if (currentBackground.value) {
-    // drawBackground(currentBackground.value);
     updateBackground(currentBackground.value);
   }
 });
-// function drawBackground(imageUrl: string) {
-//   const bgCanvas = backgroundCanvas!;
-//   const ctx = bgCanvas?.getContext('2d')!;
-//   const backgroundImg = new Image();
-//   backgroundImg.src = imageUrl;
-//   backgroundImg.onload = () => {
-//     bgCanvas.width = backgroundImg.naturalWidth || backgroundImg.width;
-//     bgCanvas.height = backgroundImg.naturalHeight || backgroundImg.height;
-//     ctx?.drawImage(backgroundImg, 0, 0, backgroundImg.width, backgroundImg.height);
-//   };
-// }
 </script>
 <style lang="scss">
 .camera {
