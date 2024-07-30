@@ -197,7 +197,7 @@ watchEffect(() => {
       height: 100%;
       object-fit: fill;
       z-index: 0;
-      opacity: 0.9;
+      opacity: 0;
     }
   }
 }

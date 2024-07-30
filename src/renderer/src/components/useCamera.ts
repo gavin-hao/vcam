@@ -2,7 +2,8 @@ import { onMounted, ref, shallowRef, triggerRef, watchEffect } from 'vue';
 import { Camera, type CameraOption, getVideoInputs } from '../lib/camera';
 import { setupStats } from '@renderer/lib/stats';
 import * as humanseg from '../paddle/index_gpu';
-
+import createSegmenter from './segmenter';
+import * as bodySegmentation from '@tensorflow-models/body-segmentation';
 export const VIDEO_SIZE = {
   '480p': { width: 640, height: 480 },
   '720p': { width: 1280, height: 720 },
@@ -20,7 +21,7 @@ let modelTime = { ...resetTime };
 const useCamera = () => {
   const outputCanvas = ref<HTMLCanvasElement>();
   const videoElement = ref<HTMLVideoElement>();
-  const videoSize = VIDEO_SIZE['720p'];
+  const videoSize = VIDEO_SIZE['480p'];
 
   let cameraOption: CameraOption = {
     width: videoSize.width,
@@ -58,7 +59,7 @@ const useCamera = () => {
     }
     camera = await Camera.setupCamera(videoElement.value!, cameraOption);
     const ppsegv2 = models.find((m) => m.key === 'ppsegv2').path;
-    console.log(camera.video.videoWidth, camera.video.width);
+
     await humanseg.load(
       {
         canvasWidth: camera.video.videoWidth,
@@ -66,6 +67,7 @@ const useCamera = () => {
       },
       ppsegv2
     );
+    segmenter = await createSegmenter(models);
     runRAF();
   });
   const checkOptionUpdate = async () => {
@@ -112,7 +114,47 @@ const useCamera = () => {
       beginEstimateSegmentationStats(modelTime);
     }
     // 当前人像分割模型使用的是ppseg
-    await humanseg.drawHumanSeg(camera.video, outputCanvas.value!);
+    // await humanseg.drawHumanSeg(camera.video, outputCanvas.value!, bgCanvas);
+
+    let segmentation = null;
+    // Segmenter can be null if initialization failed (for example when loading
+    // from a URL that does not exist).
+    if (segmenter != null) {
+      try {
+        segmentation = await segmenter.segmentPeople(camera.video, {
+          flipHorizontal: false,
+          multiSegmentation: false,
+          segmentBodyParts: false,
+          // segmentationThreshold: STATE.visualization.foregroundThreshold,
+        });
+      } catch (error) {
+        segmenter.dispose();
+        segmenter = null;
+        alert(error);
+      }
+      const gl = window.exposedContext;
+      if (gl) gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
+
+      if (segmentation && segmentation.length) {
+        const options = {
+          foregroundThreshold: 0.5,
+          maskOpacity: 1,
+          maskBlur: 0,
+          pixelCellWidth: 10,
+          backgroundBlur: 3,
+          edgeBlur: 3,
+        };
+        const data = await bodySegmentation.toBinaryMask(
+          segmentation,
+          { r: 0, g: 0, b: 0, a: 0 },
+          { r: 0, g: 0, b: 0, a: 255 },
+          false,
+          options.foregroundThreshold
+        );
+        await bodySegmentation.drawMask(outputCanvas.value!, camera.video, data, options.maskOpacity, options.maskBlur);
+        // camera.drawFromVideo();
+      }
+    }
     if (isDev) {
       endEstimateSegmentationStats(modelTime);
     }
