@@ -15,11 +15,21 @@
         <el-icon :size="24"><VideoCamera /></el-icon>
         <!-- <img width="16" height="16" src="../assets/camera.svg" alt="" /> -->
       </button>
+      <button
+        class="setting-btn"
+        style="margin-left: 20px"
+        aria-label="切换模型"
+        title="切换模型"
+        @click="switchCamera"
+      >
+        <el-icon :size="24"><Switch /></el-icon>
+        <!-- <img width="16" height="16" src="../assets/camera.svg" alt="" /> -->
+      </button>
     </div>
     <button class="camera-btn" @click="handlePhotoClick">拍照</button>
 
     <div class="right">
-      <div class="photo-preview" v-show="!!photo">
+      <div v-show="!!photo" class="photo-preview">
         <img :src="photo" alt="" />
       </div>
       <button class="setting-btn" title="相册" @click="handleAlbumlick">
@@ -30,7 +40,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { VideoCamera, Picture, Files } from '@element-plus/icons-vue';
+import { VideoCamera, Switch, Picture, Files } from '@element-plus/icons-vue';
 import { ElIcon } from 'element-plus';
 defineProps<{
   photo?: string;

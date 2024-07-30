@@ -41,7 +41,7 @@ const viewport = ref<HTMLDivElement>();
 const viewRef = ref<HTMLCanvasElement>();
 const videoRef = ref<HTMLVideoElement>();
 const controlRef = ref<HTMLDivElement>();
-const test = ref<boolean>(true)
+const test = ref<boolean>(true);
 // import { ElDialog, ElButton } from 'element-plus';
 const { width, height } = useElementBounding(viewport);
 const bgImgs = ref<{ default: string[]; user: string[] }>({ default: [], user: [] });
@@ -85,11 +85,10 @@ onMounted(async () => {
     alert('加载模型错误');
     return;
   }
-  const modelUrl = models.value.find((m) => m.key === modelConfig.value)?.path;
-  if (!modelUrl) {
-    return;
-  }
+  modelLoad();
+});
 
+const ppsegModelLoad = async (modelUrl: string) => {
   await humanseg.load({}, modelUrl);
   camera = new Camera(videoRef.value!, {
     mirror: true,
@@ -104,15 +103,6 @@ onMounted(async () => {
       const view = viewRef.value!;
       if (currentBackground.value) {
         humanseg.drawHumanSeg(video, view, backgroundCanvas);
-        // if (test.value) {
-        //   await humanseg.drawMask(video, view, backgroundCanvas);
-        //   await humanseg.drawHumanSeg(video, view);
-        // } else {
-        //   humanseg.drawHumanSeg(video, view, backgroundCanvas);
-        // }
-        
-        // await humanseg.drawHumanSeg(video, view, backgroundCanvas);
-        // humanseg.drawHumanSeg(video, view, backgroundCanvas);
       } else {
         view.width = video.width;
         view.height = video.height;
@@ -123,7 +113,31 @@ onMounted(async () => {
       camera!.start();
     },
   });
-});
+};
+
+const tfjsModelLoad = async (modelUrl: string) => {
+  const maskCanvas = document.createElement('canvas');
+  await tfjs.ready();
+  const net = await bodyPix.load({
+    architecture: 'MobileNetV1',
+    outputStride: 16,
+    quantBytes: 4,
+    multiplier: 0.5,
+    modelUrl: modelUrl2 + '/model.json',
+  });
+};
+
+const modelLoad = async () => {
+  const modelUrl = models.value.find((m) => m.key === modelConfig.value)?.path;
+  if (!modelUrl) {
+    return;
+  }
+  if (modelConfig.value === 'ppsegv2') {
+    ppsegModelLoad(modelUrl);
+  } else {
+    tfjsModelLoad(modelUrl);
+  }
+};
 
 function renderImageDataToCanvas(image: ImageData, canvas: HTMLCanvasElement | OffscreenCanvas) {
   canvas.width = image.width;
@@ -135,7 +149,7 @@ function renderImageDataToCanvas(image: ImageData, canvas: HTMLCanvasElement | O
 }
 
 function genImageSize(box_x: number, box_y: number, box_w: number, box_h: number, source_w: number, source_h: number) {
-  var dx = box_x,
+  let dx = box_x,
     dy = box_y,
     dWidth = box_w,
     dHeight = box_h;
@@ -161,53 +175,53 @@ const handlePhotoClick = async () => {
   audioShutter.value?.play();
   camera!.pause();
 
-  const modelUrl2 = models.value.find((m) => m.key === modelConfig2.value)?.path;
-  const maskCanvas = document.createElement('canvas');
+  // const modelUrl2 = models.value.find((m) => m.key === modelConfig2.value)?.path;
+  // const maskCanvas = document.createElement('canvas');
 
-  await tfjs.ready();
-  const net = await bodyPix.load({
-    architecture: 'MobileNetV1',
-    outputStride: 16,
-    quantBytes: 4,
-    multiplier: 0.75,
-    modelUrl: modelUrl2 + '/model.json',
-  });
+  // await tfjs.ready();
+  // const net = await bodyPix.load({
+  //   architecture: 'MobileNetV1',
+  //   outputStride: 16,
+  //   quantBytes: 4,
+  //   multiplier: 0.5,
+  //   modelUrl: modelUrl2 + '/model.json',
+  // });
 
-  const video = videoRef.value!
-  const view = viewRef.value!;
-  const context = view.getContext('2d')!;
+  // const video = videoRef.value!;
+  // const view = viewRef.value!;
+  // const context = view.getContext('2d')!;
 
-  const foregroundColor = { r: 0, g: 0, b: 0, a: 0 };
-  const backgroundColor = { r: 0, g: 0, b: 0, a: 255 };
-  const segmentation = await net.segmentPerson(video!, {
-    flipHorizontal: false,
-    internalResolution: 'medium',
-    segmentationThreshold: 0.7,
-    maxDetections: 1,
-    scoreThreshold: 1,
-    nmsRadius: 1,
-  });
-  const maskImage = bodyPix.toMask(segmentation, foregroundColor, backgroundColor, true);
-  view.width = maskImage.width;
-  view.height = maskImage.height;
-  context.save();
-  context.globalAlpha = 1;
-  if (maskImage) {
-    //绘制人像遮照
-    const mask = renderImageDataToCanvas(maskImage, maskCanvas);
-    // const blurredMask = drawAndBlurImageOnOffScreenCanvas(mask, maskBlurAmount, CANVAS_NAMES.blurredMask);
-    context.drawImage(mask, 0, 0, video.width, video.height);
-  }
-  context.restore();
-  context.globalCompositeOperation = 'source-in'; //新图形只在新图形和目标画布重叠的地方绘制。其他的都是透明的。
-  const imgRect = genImageSize(0, 0, view.width, view.height, backgroundCanvas.width, backgroundCanvas.height);
-  context.drawImage(backgroundCanvas, imgRect.dx, imgRect.dy, imgRect.dWidth, imgRect.dHeight);
-  context.globalCompositeOperation = 'destination-over'; // 新图形只在不重合的区域绘制
-  context.drawImage(video, 0, 0, video.width, video.height);
-  context.globalCompositeOperation = 'source-over'; // 恢复
+  // const foregroundColor = { r: 0, g: 0, b: 0, a: 0 };
+  // const backgroundColor = { r: 0, g: 0, b: 0, a: 255 };
+  // const segmentation = await net.segmentPerson(video!, {
+  //   flipHorizontal: false,
+  //   internalResolution: 'high',
+  //   segmentationThreshold: 0.7,
+  //   maxDetections: 1,
+  //   scoreThreshold: 1,
+  //   nmsRadius: 100,
+  // });
+  // const maskImage = bodyPix.toMask(segmentation, foregroundColor, backgroundColor, true);
+  // view.width = maskImage.width;
+  // view.height = maskImage.height;
+  // context.save();
+  // context.globalAlpha = 1;
+  // if (maskImage) {
+  //   //绘制人像遮照
+  //   const mask = renderImageDataToCanvas(maskImage, maskCanvas);
+  //   // const blurredMask = drawAndBlurImageOnOffScreenCanvas(mask, maskBlurAmount, CANVAS_NAMES.blurredMask);
+  //   context.drawImage(mask, 0, 0, video.width, video.height);
+  // }
+  // context.restore();
+  // context.globalCompositeOperation = 'source-in'; //新图形只在新图形和目标画布重叠的地方绘制。其他的都是透明的。
+  // const imgRect = genImageSize(0, 0, view.width, view.height, backgroundCanvas.width, backgroundCanvas.height);
+  // context.drawImage(backgroundCanvas, imgRect.dx, imgRect.dy, imgRect.dWidth, imgRect.dHeight);
+  // context.globalCompositeOperation = 'destination-over'; // 新图形只在不重合的区域绘制
+  // context.drawImage(video, 0, 0, video.width, video.height);
+  // context.globalCompositeOperation = 'source-over'; // 恢复
   // ===============
-  // const source = viewRef.value!;
-  const imageUrl = view.toDataURL('image/jpeg');
+  const source = viewRef.value!;
+  const imageUrl = source.toDataURL('image/jpeg');
   lastPhoto.value = imageUrl;
   window.api.savePhoto(imageUrl);
   setTimeout(() => {
@@ -245,8 +259,8 @@ const onKeyboardShortcuts = (combo: string) => {
       break;
     case 'enter':
     case 'tab':
-      console.log(9999)
-      test.value = !test.value
+      console.log(9999);
+      test.value = !test.value;
       break;
     case 'space':
       handlePhotoClick();
