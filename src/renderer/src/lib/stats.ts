@@ -8,6 +8,7 @@ export function setupStats(label: string) {
   const stats = new Stats();
   stats.customFpsPanel = stats.addPanel(new Stats.Panel(label, '#0ff', '#002'));
   stats.showPanel(stats.domElement.children.length - 1);
+
   document.body.appendChild(stats.dom);
 
   return stats;

@@ -589,20 +589,12 @@
   dependencies:
     node-pre-gyp "^0.17.0"
 
-"@paddlejs-models/humanseg@1.2.0":
-  version "1.2.0"
-  resolved "https://registry.npmmirror.com/@paddlejs-models/humanseg/-/humanseg-1.2.0.tgz#8830f843318ab431f039c6044ae1d18fb0b8762d"
-  integrity sha512-uLlfVl01xdU0BrqGYgkyGl7gsG/mN/OuvYh/WSsilMjS0ObCEPT1Ium1Q+tvRvLUFO8YrABRYviY03w1CZCfEQ==
-  dependencies:
-    "@paddlejs/paddlejs-backend-webgl" "^1.1.15"
-    "@paddlejs/paddlejs-core" "^2.1.14"
-
-"@paddlejs/paddlejs-backend-webgl@^1.1.15":
+"@paddlejs/paddlejs-backend-webgl@^1.2.9":
   version "1.2.9"
   resolved "https://registry.npmmirror.com/@paddlejs/paddlejs-backend-webgl/-/paddlejs-backend-webgl-1.2.9.tgz#7be2df7c8449548c61599d144085a38bc0bda8c8"
   integrity sha512-cVDa0/Wbw2EyfsYqdYUPhFeqKsET79keEUWjyhYQmQkJfWg8j1qdR6yp7g6nx9qAGrqFvwuj1s0EqkYA1dok6A==
 
-"@paddlejs/paddlejs-core@^2.1.14":
+"@paddlejs/paddlejs-core@^2.2.0":
   version "2.2.0"
   resolved "https://registry.npmmirror.com/@paddlejs/paddlejs-core/-/paddlejs-core-2.2.0.tgz#67c297e62c6b0f9738962a0b8ca1789d0325f0af"
   integrity sha512-P3rPkF9fFHtq8uSte5gA7fJQwBNl9Ytsvj6aTcfQSsirnBO/HxMNu0gJyh7+lItvEtF92PR15eI0eOwJYfZDhQ==

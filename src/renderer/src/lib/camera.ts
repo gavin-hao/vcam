@@ -1,19 +1,28 @@
-export const VIDEO_SIZE = {
-  '640 X 360': { width: 640, height: 360 },
-  '1280 X 720': { width: 640, height: 360 },
-  '1920 X 1080': { width: 1920, height: 1080 },
-} as const;
-
 export interface CameraOption {
-  targetFPS: number;
-  width: number;
-  height: number;
-  cameraSelector: string;
+  /**
+   * 摄像头帧率，在某些情况下，比如 WebRTC 上使用受限带宽传输时，低帧率可能更适宜
+   */
+  targetFPS?: number;
+  /**
+   * 摄像头分辨率 width
+   */
+  width?: number;
+  /**
+   * 摄像头分辨率 height
+   */
+  height?: number;
+  /**
+   * 视频图像绘制的canvas，不设置默认返回 vedio
+   */
+  canvas?: HTMLCanvasElement;
+  deviceId?: string;
+  videoDevices?: MediaDeviceInfo[];
+  // enableOnInactiveState?: boolean;
 }
-export const STATE = {
-  camera: { targetFPS: 60, sizeOption: '1280 X 720', cameraSelector: '' },
-  fpsDisplay: { mode: 'model' },
-};
+// export const STATE = {
+//   camera: { targetFPS: 60, sizeOption: '1280 X 720', cameraSelector: '' },
+//   fpsDisplay: { mode: 'model' },
+// };
 async function getDeviceIdForLabel(cameras: MediaDeviceInfo[], cameraLabel: string) {
   for (let i = 0; i < cameras.length; i++) {
     const camera = cameras[i];
@@ -38,49 +47,58 @@ export async function getVideoInputs() {
 }
 export class Camera {
   video: HTMLVideoElement;
-  canvas: HTMLCanvasElement;
-  ctx: CanvasRenderingContext2D | null;
-  constructor(video: HTMLVideoElement, output: HTMLCanvasElement) {
+  canvas?: HTMLCanvasElement;
+  ctx?: CanvasRenderingContext2D | null;
+  videoDevices?: MediaDeviceInfo[];
+  deviceId?: string;
+  constructor(video: HTMLVideoElement, targetCanvas?: HTMLCanvasElement) {
     this.video = video;
-    this.canvas = output;
-    this.ctx = this.canvas.getContext('2d');
+    this.canvas = targetCanvas;
+    this.ctx = this.canvas?.getContext('2d');
   }
 
   /**
    * Initiate a Camera instance and wait for the camera stream to be ready.
-   * @param cameraParam From app `STATE.camera`.
+   * @param option CameraOption
    */
-  static async setupCamera(cameraParam: CameraOption, video: HTMLVideoElement, canvas: HTMLCanvasElement) {
+  static async setupCamera(video: HTMLVideoElement, option?: CameraOption) {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       throw new Error('Browser API navigator.mediaDevices.getUserMedia not available');
     }
-    const cameras = await getVideoInputs();
-    const { targetFPS, width, height, cameraSelector } = cameraParam;
+    // const cameras = option?.videoDevices || (await getVideoInputs());
+    const { targetFPS, width, height, deviceId, canvas } = option || {};
 
     const $size = { width, height };
-    const deviceId = await getDeviceIdForLabel(cameras, cameraSelector);
-    const videoConfig: MediaStreamConstraints = {
+    let $deviceId = deviceId;
+    console.log('deviceId', deviceId);
+    // const deviceId = await getDeviceIdForLabel(cameras, cameraSelector);
+    if (!$deviceId) {
+      const cameras = await getVideoInputs();
+      $deviceId = cameras[0]?.deviceId;
+    }
+    const constraints: MediaStreamConstraints = {
       audio: false,
       video: {
-        deviceId,
+        deviceId: { ideal: $deviceId },
         // Only setting the video to a specified size for large screen, on
         // mobile devices accept the default size.
         width: $size.width,
         height: $size.height,
+        // facingMode: 'environment',
         frameRate: {
           ideal: targetFPS,
         },
       },
     };
 
-    const stream = await navigator.mediaDevices.getUserMedia(videoConfig);
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
     const camera = new Camera(video, canvas);
     camera.video.srcObject = stream;
 
     await new Promise((resolve) => {
       camera.video.onloadedmetadata = () => {
-        resolve(video);
+        resolve(true);
       };
     });
 
@@ -91,12 +109,10 @@ export class Camera {
     // Must set below two lines, otherwise video element doesn't show.
     camera.video.width = videoWidth;
     camera.video.height = videoHeight;
-
-    camera.canvas.width = videoWidth;
-    camera.canvas.height = videoHeight;
-    // const canvasContainer = document.querySelector('.canvas-wrapper');
-    // canvasContainer.style = `width: ${videoWidth}px; height: ${videoHeight}px`;
-
+    if (camera.canvas) {
+      camera.canvas.width = videoWidth;
+      camera.canvas.height = videoHeight;
+    }
     // Because the image from camera is mirrored, need to flip horizontally.
     camera.ctx?.translate(camera.video.videoWidth, 0);
     camera.ctx?.scale(-1, 1);
@@ -114,5 +130,12 @@ export class Camera {
 
   clearCtx() {
     this.ctx?.clearRect(0, 0, this.video.videoWidth, this.video.videoHeight);
+  }
+  start() {
+    this.video && this.video.play();
+    // this.visible = true;
+  }
+  pause() {
+    this.video?.pause();
   }
 }

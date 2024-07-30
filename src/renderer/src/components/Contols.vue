@@ -2,19 +2,26 @@
   <div class="controls">
     <div class="left">
       <button class="setting-btn" aria-label="设置背景图" title="设置背景" @click="handleBackgroundSettingClick">
-        <!-- <img width="32" height="32" src="../assets/background-effect.svg" alt="" /> -->
         <el-icon :size="32"><Picture /></el-icon>
       </button>
-      <button
-        class="setting-btn"
-        style="margin-left: 20px"
-        aria-label="重制摄像头"
-        title="重制摄像头"
-        @click="switchCamera"
-      >
-        <el-icon :size="24"><VideoCamera /></el-icon>
-        <!-- <img width="16" height="16" src="../assets/camera.svg" alt="" /> -->
-      </button>
+      <el-dropdown v-if="cameras.length > 1" trigger="click" @command="handleSwitchCamera">
+        <button
+          class="setting-btn"
+          style="margin-left: 20px"
+          aria-label="重制摄像头"
+          title="重制摄像头"
+          ref="buttonRef"
+        >
+          <el-icon :size="24"><VideoCamera /></el-icon>
+        </button>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item :command="camera.deviceId" v-for="camera in cameras"
+              ><span class="camera-info">{{ camera.label }}</span></el-dropdown-item
+            >
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
     </div>
     <button class="camera-btn" @click="handlePhotoClick">拍照</button>
 
@@ -23,22 +30,26 @@
         <img :src="photo" alt="" />
       </div>
       <button class="setting-btn" title="相册" @click="handleAlbumlick">
-        <!-- <img width="32" height="32" src="../assets/photo-album.svg" alt="" /> -->
         <el-icon :size="32"><Files /></el-icon>
       </button>
     </div>
   </div>
 </template>
 <script setup lang="ts">
+import { ref } from 'vue';
 import { VideoCamera, Picture, Files } from '@element-plus/icons-vue';
-import { ElIcon } from 'element-plus';
+import { ElIcon, ElDropdown, ElDropdownMenu, ElDropdownItem } from 'element-plus';
+
+const buttonRef = ref();
+
 defineProps<{
   photo?: string;
+  cameras: MediaDeviceInfo[];
 }>();
 
 const emits = defineEmits(['switchCamera', 'shutterClick', 'openAlbum', 'openBackgroundDialog']);
-const switchCamera = async () => {
-  emits('switchCamera');
+const handleSwitchCamera = async (cmd: string) => {
+  emits('switchCamera', cmd);
 };
 const handleAlbumlick = () => {
   emits('openAlbum');
@@ -51,6 +62,13 @@ const handleBackgroundSettingClick = () => {
 };
 </script>
 <style lang="scss">
+.camera-info {
+  display: inline-block;
+  max-width: 200px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
 .controls {
   flex: auto;
   display: flex;
@@ -59,6 +77,7 @@ const handleBackgroundSettingClick = () => {
   max-height: 84px;
   justify-content: space-between;
   padding: 2px 12px;
+
   .setting-btn {
     padding: 2px;
     outline: none;
