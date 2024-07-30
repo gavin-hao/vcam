@@ -1,7 +1,7 @@
 <template>
   <div class="camera">
     <div class="viewport" ref="viewport">
-      <video id="video" ref="videoElement" playsinline :width="width" :height="height"></video>
+      <video id="video" ref="videoElement" playsinline></video>
       <canvas id="view" ref="outputCanvas"></canvas>
       <img id="background" v-show="!!currentBackground" :src="currentBackground" alt="" />
       <audio :src="shutterMp3" :loop="false" :volume="0.7" v-show="false" ref="audioShutter"></audio>
@@ -35,7 +35,7 @@ import shutterMp3 from '../assets/camera-shutter.mp3?asset';
 import useCamera from './useCamera';
 import useAutoHide from './useAutoHide';
 const viewport = ref<HTMLDivElement>();
-const { outputCanvas, videoElement, cameras, switchCamera, updateBackground, takePhoto } = useCamera();
+const { outputCanvas, videoElement, cameras, switchCamera, updateBackground, takePhoto, videoSize } = useCamera();
 const { container: controlRef } = useAutoHide();
 const { width, height } = useElementBounding(viewport);
 const bgImgs = ref<{ default: string[]; user: string[] }>();
@@ -51,7 +51,22 @@ window.api.onBackgroundImageUpdate((imgs) => {
 });
 const currentBackground = ref<string>();
 const modelConfig = ref<string>('ppsegv2');
+watchEffect(() => {
+  if (!outputCanvas.value) {
+    return;
+  }
+  outputCanvas.value!.style.transformOrigin = 'left center';
+  if (width.value / height.value > videoSize.width / videoSize.height) {
+    // 如果放缩后屏幕【宽】，就用屏幕高度计算放缩
 
+    // 设置新算出来的scale
+    outputCanvas.value!.style.transform = `scale(${height.value / videoSize.height})`;
+  } else {
+    // 如果放缩后屏幕【窄】，就用屏幕宽度计算放缩
+    // 设置新算出来的scale
+    outputCanvas.value!.style.transform = `scale(${width.value / videoSize.width})`;
+  }
+});
 onMounted(async () => {
   Mousetrap.bind(['up', 'down', 'pageup', 'pagedown', 'left', 'right', 'enter', 'tab', 'space'], function (_e, combo) {
     onKeyboardShortcuts(combo);

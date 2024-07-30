@@ -21,6 +21,7 @@ const useCamera = () => {
   const outputCanvas = ref<HTMLCanvasElement>();
   const videoElement = ref<HTMLVideoElement>();
   const videoSize = VIDEO_SIZE['720p'];
+
   let cameraOption: CameraOption = {
     width: videoSize.width,
     height: videoSize.height,
@@ -57,10 +58,11 @@ const useCamera = () => {
     }
     camera = await Camera.setupCamera(videoElement.value!, cameraOption);
     const ppsegv2 = models.find((m) => m.key === 'ppsegv2').path;
+    console.log(camera.video.videoWidth, camera.video.width);
     await humanseg.load(
       {
-        canvasWidth: camera.video.width,
-        canvasHeight: camera.video.height,
+        canvasWidth: camera.video.videoWidth,
+        canvasHeight: camera.video.videoHeight,
       },
       ppsegv2
     );
@@ -151,6 +153,7 @@ const useCamera = () => {
     takePhoto,
     updateBackground,
     cameras,
+    videoSize,
   };
 };
 export default useCamera;
