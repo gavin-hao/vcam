@@ -152,6 +152,9 @@ const useCamera = () => {
           options.foregroundThreshold
         );
         await bodySegmentation.drawMask(outputCanvas.value!, camera.video, data, options.maskOpacity, options.maskBlur);
+        const context = outputCanvas.value?.getContext('2d')!;
+        context.globalCompositeOperation = 'destination-over'; // 新图形只在不重合的区域绘制
+        context.drawImage(bgCanvas, 0, 0, context.canvas.width, context.canvas.height);
         // camera.drawFromVideo();
       }
     }
