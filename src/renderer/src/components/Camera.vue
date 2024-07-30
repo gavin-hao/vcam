@@ -48,9 +48,11 @@ const bgImgs = ref<{ default: string[]; user: string[] }>({ default: [], user: [
 let camera: Camera | null;
 const dialogBackgroundVisible = ref<boolean>(false);
 const backgroundCanvas = document.createElement('canvas') as HTMLCanvasElement;
+const maskCanvas = document.createElement('canvas');
 const audioShutter = ref<HTMLAudioElement>();
 const lastPhoto = ref<string>();
 const cameraStart = ref<boolean>(false);
+const net = ref();
 const allBgImgs = computed(() => {
   return bgImgs.value?.default.concat(bgImgs.value.user) || [];
 });
@@ -59,8 +61,8 @@ window.api.onBackgroundImageUpdate((imgs) => {
   bgImgs.value = imgs;
 });
 const currentBackground = ref<string>();
-const modelConfig = ref<string>('ppsegv2');
-const modelConfig2 = ref<string>('tfjs-mobilenet');
+const modelConfig2 = ref<string>('ppsegv2');
+const modelConfig = ref<string>('tfjs-mobilenet');
 const clsHideControl = ref<string>();
 const { start: startTimer, stop: stopTimer } = useTimeout(5000, {
   controls: true,
@@ -85,11 +87,7 @@ onMounted(async () => {
     alert('加载模型错误');
     return;
   }
-  modelLoad();
-});
-
-const ppsegModelLoad = async (modelUrl: string) => {
-  await humanseg.load({}, modelUrl);
+  await modelLoad();
   camera = new Camera(videoRef.value!, {
     mirror: true,
     enableOnInactiveState: true,
@@ -100,42 +98,76 @@ const ppsegModelLoad = async (modelUrl: string) => {
       alert(e.message || '开启摄像头错误');
     },
     onFrame: async (video) => {
-      const view = viewRef.value!;
-      if (currentBackground.value) {
-        humanseg.drawHumanSeg(video, view, backgroundCanvas);
-      } else {
-        view.width = video.width;
-        view.height = video.height;
-        view.getContext('2d')?.drawImage(video, 0, 0, video.width, video.height);
-      }
+      dealImage(video);
     },
     videoLoaded: () => {
       camera!.start();
     },
   });
-};
+});
 
-const tfjsModelLoad = async (modelUrl: string) => {
-  const maskCanvas = document.createElement('canvas');
-  await tfjs.ready();
-  const net = await bodyPix.load({
-    architecture: 'MobileNetV1',
-    outputStride: 16,
-    quantBytes: 4,
-    multiplier: 0.5,
-    modelUrl: modelUrl2 + '/model.json',
-  });
+const dealImage = async (video: HTMLVideoElement) => {
+  if (video.width <= 0 || video.height <= 0) {
+    return;
+  }
+  const view = viewRef.value!;
+  const context = view.getContext('2d')!;
+  if (!currentBackground.value) {
+    view.width = video.width;
+    view.height = video.height;
+    context.drawImage(video, 0, 0, video.width, video.height);
+  } else {
+    if (modelConfig.value === 'ppsegv2') {
+      humanseg.drawHumanSeg(video, view, backgroundCanvas);
+    } else {
+      console.log(99999);
+      const foregroundColor = { r: 0, g: 0, b: 0, a: 0 };
+      const backgroundColor = { r: 0, g: 0, b: 0, a: 255 };
+      console.log(net.value, 1111);
+      const segmentation = await net.value.segmentPerson(video!, {
+        flipHorizontal: false,
+        internalResolution: 'high',
+        segmentationThreshold: 0.7,
+        maxDetections: 1,
+        scoreThreshold: 1,
+        nmsRadius: 100,
+      });
+      // const maskImage = bodyPix.toMask(segmentation, foregroundColor, backgroundColor, true);
+      // view.width = maskImage.width;
+      // view.height = maskImage.height;
+      // context.save();
+      // context.globalAlpha = 1;
+      // if (maskImage) {
+      //   //绘制人像遮照
+      //   const mask = renderImageDataToCanvas(maskImage, maskCanvas);
+      //   context.drawImage(mask, 0, 0, video.width, video.height);
+      // }
+      // context.restore();
+      // context.globalCompositeOperation = 'source-in'; //新图形只在新图形和目标画布重叠的地方绘制。其他的都是透明的。
+      // const imgRect = genImageSize(0, 0, view.width, view.height, backgroundCanvas.width, backgroundCanvas.height);
+      // context.drawImage(backgroundCanvas, imgRect.dx, imgRect.dy, imgRect.dWidth, imgRect.dHeight);
+      // context.globalCompositeOperation = 'destination-over'; // 新图形只在不重合的区域绘制
+      // context.drawImage(video, 0, 0, video.width, video.height);
+      // context.globalCompositeOperation = 'source-over'; // 恢复
+    }
+  }
 };
 
 const modelLoad = async () => {
-  const modelUrl = models.value.find((m) => m.key === modelConfig.value)?.path;
-  if (!modelUrl) {
-    return;
+  const ppsegModelUrl = models.value.find((m) => m.key === 'ppsegv2')?.path;
+  const tfjsModelUrl = models.value.find((m) => m.key === 'tfjs-mobilenet')?.path;
+  if (ppsegModelUrl) {
+    await humanseg.load({}, ppsegModelUrl);
   }
-  if (modelConfig.value === 'ppsegv2') {
-    ppsegModelLoad(modelUrl);
-  } else {
-    tfjsModelLoad(modelUrl);
+  if (tfjsModelUrl) {
+    await tfjs.ready();
+    net.value = await bodyPix.load({
+      architecture: 'MobileNetV1',
+      outputStride: 16,
+      quantBytes: 4,
+      multiplier: 0.75,
+      modelUrl: tfjsModelUrl + '/model.json',
+    });
   }
 };
 
