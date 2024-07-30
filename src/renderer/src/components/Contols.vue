@@ -2,7 +2,6 @@
   <div class="controls">
     <div class="left">
       <button class="setting-btn" aria-label="设置背景图" title="设置背景" @click="handleBackgroundSettingClick">
-        <!-- <img width="32" height="32" src="../assets/background-effect.svg" alt="" /> -->
         <el-icon :size="32"><Picture /></el-icon>
       </button>
       <button
@@ -13,18 +12,10 @@
         @click="switchCamera"
       >
         <el-icon :size="24"><VideoCamera /></el-icon>
-        <!-- <img width="16" height="16" src="../assets/camera.svg" alt="" /> -->
       </button>
-      <button
-        class="setting-btn"
-        style="margin-left: 20px"
-        aria-label="切换模型"
-        title="切换模型"
-        @click="switchCamera"
-      >
+      <!-- <button class="setting-btn" style="margin-left: 20px" aria-label="切换模型" title="切换模型" @click="switchModel">
         <el-icon :size="24"><Switch /></el-icon>
-        <!-- <img width="16" height="16" src="../assets/camera.svg" alt="" /> -->
-      </button>
+      </button> -->
     </div>
     <button class="camera-btn" @click="handlePhotoClick">拍照</button>
 
@@ -46,7 +37,7 @@ defineProps<{
   photo?: string;
 }>();
 
-const emits = defineEmits(['switchCamera', 'shutterClick', 'openAlbum', 'openBackgroundDialog']);
+const emits = defineEmits(['switchCamera', 'shutterClick', 'openAlbum', 'openBackgroundDialog', 'switchModel']);
 const switchCamera = async () => {
   emits('switchCamera');
 };
@@ -58,6 +49,9 @@ const handlePhotoClick = () => {
 };
 const handleBackgroundSettingClick = () => {
   emits('openBackgroundDialog');
+};
+const switchModel = () => {
+  emits('switchModel');
 };
 </script>
 <style lang="scss">

@@ -13,6 +13,7 @@
         @shutter-click="handlePhotoClick"
         @open-background-dialog="handleOpenBackgroundDialog"
         @open-album="handleOpenAlbum"
+        @switch-model="switchModel"
       />
     </div>
     <BackgroundDialog
@@ -46,13 +47,13 @@ const test = ref<boolean>(true);
 const { width, height } = useElementBounding(viewport);
 const bgImgs = ref<{ default: string[]; user: string[] }>({ default: [], user: [] });
 let camera: Camera | null;
+let net: bodyPix.BodyPix;
 const dialogBackgroundVisible = ref<boolean>(false);
 const backgroundCanvas = document.createElement('canvas') as HTMLCanvasElement;
 const maskCanvas = document.createElement('canvas');
 const audioShutter = ref<HTMLAudioElement>();
 const lastPhoto = ref<string>();
 const cameraStart = ref<boolean>(false);
-const net = ref();
 const allBgImgs = computed(() => {
   return bgImgs.value?.default.concat(bgImgs.value.user) || [];
 });
@@ -61,8 +62,8 @@ window.api.onBackgroundImageUpdate((imgs) => {
   bgImgs.value = imgs;
 });
 const currentBackground = ref<string>();
-const modelConfig2 = ref<string>('ppsegv2');
-const modelConfig = ref<string>('tfjs-mobilenet');
+const modelConfig2 = ref<string>('tfjs-mobilenet');
+const modelConfig = ref<string>('ppsegv2');
 const clsHideControl = ref<string>();
 const { start: startTimer, stop: stopTimer } = useTimeout(5000, {
   controls: true,
@@ -106,6 +107,10 @@ onMounted(async () => {
   });
 });
 
+const switchModel = () => {
+  modelConfig.value = modelConfig.value === 'tfjs-mobilenet' ? 'ppsegv2' : 'tfjs-mobilenet';
+};
+
 const dealImage = async (video: HTMLVideoElement) => {
   if (video.width <= 0 || video.height <= 0) {
     return;
@@ -123,32 +128,32 @@ const dealImage = async (video: HTMLVideoElement) => {
       console.log(99999);
       const foregroundColor = { r: 0, g: 0, b: 0, a: 0 };
       const backgroundColor = { r: 0, g: 0, b: 0, a: 255 };
-      console.log(net.value, 1111);
-      const segmentation = await net.value.segmentPerson(video!, {
+      console.log(net, 1111);
+      const segmentation = await net.segmentPerson(video!, {
         flipHorizontal: false,
-        internalResolution: 'high',
+        internalResolution: 0.75,
         segmentationThreshold: 0.7,
-        maxDetections: 1,
-        scoreThreshold: 1,
-        nmsRadius: 100,
+        maxDetections: 10,
+        scoreThreshold: 0.3,
+        nmsRadius: 20,
       });
-      // const maskImage = bodyPix.toMask(segmentation, foregroundColor, backgroundColor, true);
-      // view.width = maskImage.width;
-      // view.height = maskImage.height;
-      // context.save();
-      // context.globalAlpha = 1;
-      // if (maskImage) {
-      //   //绘制人像遮照
-      //   const mask = renderImageDataToCanvas(maskImage, maskCanvas);
-      //   context.drawImage(mask, 0, 0, video.width, video.height);
-      // }
-      // context.restore();
-      // context.globalCompositeOperation = 'source-in'; //新图形只在新图形和目标画布重叠的地方绘制。其他的都是透明的。
-      // const imgRect = genImageSize(0, 0, view.width, view.height, backgroundCanvas.width, backgroundCanvas.height);
-      // context.drawImage(backgroundCanvas, imgRect.dx, imgRect.dy, imgRect.dWidth, imgRect.dHeight);
-      // context.globalCompositeOperation = 'destination-over'; // 新图形只在不重合的区域绘制
-      // context.drawImage(video, 0, 0, video.width, video.height);
-      // context.globalCompositeOperation = 'source-over'; // 恢复
+      const maskImage = bodyPix.toMask(segmentation, foregroundColor, backgroundColor, true);
+      view.width = maskImage.width;
+      view.height = maskImage.height;
+      context.save();
+      context.globalAlpha = 1;
+      if (maskImage) {
+        //绘制人像遮照
+        const mask = renderImageDataToCanvas(maskImage, maskCanvas);
+        context.drawImage(mask, 0, 0, video.width, video.height);
+      }
+      context.restore();
+      context.globalCompositeOperation = 'source-in'; //新图形只在新图形和目标画布重叠的地方绘制。其他的都是透明的。
+      const imgRect = genImageSize(0, 0, view.width, view.height, backgroundCanvas.width, backgroundCanvas.height);
+      context.drawImage(backgroundCanvas, imgRect.dx, imgRect.dy, imgRect.dWidth, imgRect.dHeight);
+      context.globalCompositeOperation = 'destination-over'; // 新图形只在不重合的区域绘制
+      context.drawImage(video, 0, 0, video.width, video.height);
+      context.globalCompositeOperation = 'source-over'; // 恢复
     }
   }
 };
@@ -161,7 +166,7 @@ const modelLoad = async () => {
   }
   if (tfjsModelUrl) {
     await tfjs.ready();
-    net.value = await bodyPix.load({
+    net = await bodyPix.load({
       architecture: 'MobileNetV1',
       outputStride: 16,
       quantBytes: 4,
@@ -207,53 +212,53 @@ const handlePhotoClick = async () => {
   audioShutter.value?.play();
   camera!.pause();
 
-  // const modelUrl2 = models.value.find((m) => m.key === modelConfig2.value)?.path;
-  // const maskCanvas = document.createElement('canvas');
+  const modelUrl2 = models.value.find((m) => m.key === modelConfig2.value)?.path;
+  const maskCanvas = document.createElement('canvas');
 
-  // await tfjs.ready();
-  // const net = await bodyPix.load({
-  //   architecture: 'MobileNetV1',
-  //   outputStride: 16,
-  //   quantBytes: 4,
-  //   multiplier: 0.5,
-  //   modelUrl: modelUrl2 + '/model.json',
-  // });
+  await tfjs.ready();
+  const net = await bodyPix.load({
+    architecture: 'MobileNetV1',
+    outputStride: 16,
+    quantBytes: 4,
+    multiplier: 0.5,
+    modelUrl: modelUrl2 + '/model.json',
+  });
 
-  // const video = videoRef.value!;
-  // const view = viewRef.value!;
-  // const context = view.getContext('2d')!;
+  const video = videoRef.value!;
+  const view = viewRef.value!;
+  const context = view.getContext('2d')!;
 
-  // const foregroundColor = { r: 0, g: 0, b: 0, a: 0 };
-  // const backgroundColor = { r: 0, g: 0, b: 0, a: 255 };
-  // const segmentation = await net.segmentPerson(video!, {
-  //   flipHorizontal: false,
-  //   internalResolution: 'high',
-  //   segmentationThreshold: 0.7,
-  //   maxDetections: 1,
-  //   scoreThreshold: 1,
-  //   nmsRadius: 100,
-  // });
-  // const maskImage = bodyPix.toMask(segmentation, foregroundColor, backgroundColor, true);
-  // view.width = maskImage.width;
-  // view.height = maskImage.height;
-  // context.save();
-  // context.globalAlpha = 1;
-  // if (maskImage) {
-  //   //绘制人像遮照
-  //   const mask = renderImageDataToCanvas(maskImage, maskCanvas);
-  //   // const blurredMask = drawAndBlurImageOnOffScreenCanvas(mask, maskBlurAmount, CANVAS_NAMES.blurredMask);
-  //   context.drawImage(mask, 0, 0, video.width, video.height);
-  // }
-  // context.restore();
-  // context.globalCompositeOperation = 'source-in'; //新图形只在新图形和目标画布重叠的地方绘制。其他的都是透明的。
-  // const imgRect = genImageSize(0, 0, view.width, view.height, backgroundCanvas.width, backgroundCanvas.height);
-  // context.drawImage(backgroundCanvas, imgRect.dx, imgRect.dy, imgRect.dWidth, imgRect.dHeight);
-  // context.globalCompositeOperation = 'destination-over'; // 新图形只在不重合的区域绘制
-  // context.drawImage(video, 0, 0, video.width, video.height);
-  // context.globalCompositeOperation = 'source-over'; // 恢复
+  const foregroundColor = { r: 0, g: 0, b: 0, a: 0 };
+  const backgroundColor = { r: 0, g: 0, b: 0, a: 255 };
+  const segmentation = await net.segmentPerson(video!, {
+    flipHorizontal: false,
+    internalResolution: 'high',
+    segmentationThreshold: 0.7,
+    maxDetections: 1,
+    scoreThreshold: 1,
+    nmsRadius: 100,
+  });
+  const maskImage = bodyPix.toMask(segmentation, foregroundColor, backgroundColor, true);
+  view.width = maskImage.width;
+  view.height = maskImage.height;
+  context.save();
+  context.globalAlpha = 1;
+  if (maskImage) {
+    //绘制人像遮照
+    const mask = renderImageDataToCanvas(maskImage, maskCanvas);
+    // const blurredMask = drawAndBlurImageOnOffScreenCanvas(mask, maskBlurAmount, CANVAS_NAMES.blurredMask);
+    context.drawImage(mask, 0, 0, video.width, video.height);
+  }
+  context.restore();
+  context.globalCompositeOperation = 'source-in'; //新图形只在新图形和目标画布重叠的地方绘制。其他的都是透明的。
+  const imgRect = genImageSize(0, 0, view.width, view.height, backgroundCanvas.width, backgroundCanvas.height);
+  context.drawImage(backgroundCanvas, imgRect.dx, imgRect.dy, imgRect.dWidth, imgRect.dHeight);
+  context.globalCompositeOperation = 'destination-over'; // 新图形只在不重合的区域绘制
+  context.drawImage(video, 0, 0, video.width, video.height);
+  context.globalCompositeOperation = 'source-over'; // 恢复
   // ===============
-  const source = viewRef.value!;
-  const imageUrl = source.toDataURL('image/jpeg');
+  // const source = viewRef.value!;
+  const imageUrl = view.toDataURL('image/jpeg');
   lastPhoto.value = imageUrl;
   window.api.savePhoto(imageUrl);
   setTimeout(() => {
