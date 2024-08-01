@@ -49,8 +49,9 @@ export class Camera {
   video: HTMLVideoElement;
   canvas?: HTMLCanvasElement;
   ctx?: CanvasRenderingContext2D | null;
-  videoDevices?: MediaDeviceInfo[];
+  // videoDevices?: MediaDeviceInfo[];
   deviceId?: string;
+  private stream?: MediaStream;
   constructor(video: HTMLVideoElement, targetCanvas?: HTMLCanvasElement) {
     this.video = video;
     this.canvas = targetCanvas;
@@ -65,12 +66,10 @@ export class Camera {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       throw new Error('Browser API navigator.mediaDevices.getUserMedia not available');
     }
-    // const cameras = option?.videoDevices || (await getVideoInputs());
     const { targetFPS, width, height, deviceId, canvas } = option || {};
 
     const $size = { width, height };
     let $deviceId = deviceId;
-    console.log('deviceId', deviceId);
     // const deviceId = await getDeviceIdForLabel(cameras, cameraSelector);
     if (!$deviceId) {
       const cameras = await getVideoInputs();
@@ -95,13 +94,13 @@ export class Camera {
 
     const camera = new Camera(video, canvas);
     camera.video.srcObject = stream;
-
+    camera.stream = stream;
     await new Promise((resolve) => {
       camera.video.onloadedmetadata = () => {
         resolve(true);
       };
     });
-
+    camera.deviceId = $deviceId;
     camera.video.play();
 
     const videoWidth = camera.video.videoWidth;
@@ -133,7 +132,11 @@ export class Camera {
   }
   start() {
     this.video && this.video.play();
-    // this.visible = true;
+  }
+  stop() {
+    this.stream?.getTracks().forEach((track) => {
+      track.stop();
+    });
   }
   pause() {
     this.video?.pause();

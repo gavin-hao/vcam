@@ -4,12 +4,14 @@ import { setupStats } from '@renderer/lib/stats';
 import * as humanseg from '../paddle/index_gpu';
 import createSegmenter from './segmenter';
 import * as bodySegmentation from '@tensorflow-models/body-segmentation';
+import { Segmentation } from '@tensorflow-models/body-segmentation/dist/shared/calculators/interfaces/common_interfaces';
 export const VIDEO_SIZE = {
-  '480p': { width: 640, height: 480 },
+  '480p': { width: 720, height: 480 },
   '720p': { width: 1280, height: 720 },
   '1080p': { width: 1920, height: 1080 },
 } as const;
-let stats, segmenter;
+let stats;
+let segmenter: bodySegmentation.BodySegmenter | null;
 let rafId: number;
 const resetTime = {
   startInferenceTime: 0,
@@ -21,7 +23,7 @@ let modelTime = { ...resetTime };
 const useCamera = () => {
   const outputCanvas = ref<HTMLCanvasElement>();
   const videoElement = ref<HTMLVideoElement>();
-  const videoSize = VIDEO_SIZE['480p'];
+  const videoSize = VIDEO_SIZE['720p'];
 
   let cameraOption: CameraOption = {
     width: videoSize.width,
@@ -57,22 +59,24 @@ const useCamera = () => {
       alert('加载模型错误');
       return;
     }
+    cameraOption.canvas = outputCanvas.value;
     camera = await Camera.setupCamera(videoElement.value!, cameraOption);
-    const ppsegv2 = models.find((m) => m.key === 'ppsegv2').path;
+    // const ppsegv2 = models.find((m) => m.key === 'ppsegv2').path;
 
-    await humanseg.load(
-      {
-        canvasWidth: camera.video.videoWidth,
-        canvasHeight: camera.video.videoHeight,
-      },
-      ppsegv2
-    );
+    // await humanseg.load(
+    //   {
+    //     canvasWidth: camera.video.videoWidth,
+    //     canvasHeight: camera.video.videoHeight,
+    //   },
+    //   ppsegv2
+    // );
     segmenter = await createSegmenter(models);
     runRAF();
   });
   const checkOptionUpdate = async () => {
     if (isCameraChanged) {
       cancelAnimationFrame(rafId);
+      camera?.stop();
       camera = await Camera.setupCamera(videoElement.value!, cameraOption);
       isCameraChanged = false;
     }
@@ -95,8 +99,11 @@ const useCamera = () => {
       time.lastPanelUpdate = endInferenceTime;
     }
   }
-
-  const runRAF = async () => {
+  // let elapsed = 0;
+  const runRAF = async (_prevTime: number = performance.now()) => {
+    // const time = performance.now();
+    // elapsed += time - prevTime;
+    // if (elapsed > 1000 / 60) {
     checkOptionUpdate();
     if (camera.video.readyState < 2) {
       await new Promise((resolve) => {
@@ -105,9 +112,13 @@ const useCamera = () => {
         };
       });
     }
+
     renderResult();
+    // elapsed = 0;
+    // }
     rafId = requestAnimationFrame(runRAF);
   };
+
   async function renderResult() {
     if (isDev) {
       //统计模型性能
@@ -115,8 +126,7 @@ const useCamera = () => {
     }
     // 当前人像分割模型使用的是ppseg
     // await humanseg.drawHumanSeg(camera.video, outputCanvas.value!, bgCanvas);
-
-    let segmentation = null;
+    let segmentation: Segmentation[] | null = null;
     // Segmenter can be null if initialization failed (for example when loading
     // from a URL that does not exist).
     if (segmenter != null) {
@@ -132,6 +142,7 @@ const useCamera = () => {
         segmenter = null;
         alert(error);
       }
+      //@ts-ignore
       const gl = window.exposedContext;
       if (gl) gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
 
@@ -151,10 +162,14 @@ const useCamera = () => {
           false,
           options.foregroundThreshold
         );
-        await bodySegmentation.drawMask(outputCanvas.value!, camera.video, data, options.maskOpacity, options.maskBlur);
-        const context = outputCanvas.value?.getContext('2d')!;
-        context.globalCompositeOperation = 'destination-over'; // 新图形只在不重合的区域绘制
-        context.drawImage(bgCanvas, 0, 0, context.canvas.width, context.canvas.height);
+        const canvas = camera.canvas || outputCanvas.value!;
+        await bodySegmentation.drawMask(canvas, camera.video, data, options.maskOpacity, options.maskBlur);
+        // const context = outputCanvas.value?.getContext('2d')!;
+        // context.globalCompositeOperation = 'destination-over'; // 新图形只在不重合的区域绘制
+        // context.drawImage(bgCanvas, 0, 0, context.canvas.width, context.canvas.height);
+        const ctx = camera.ctx;
+
+        camera.drawToCanvas(canvas);
         // camera.drawFromVideo();
       }
     }

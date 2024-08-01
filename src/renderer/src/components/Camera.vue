@@ -1,14 +1,15 @@
 <template>
   <div class="camera">
     <div class="viewport" ref="viewport">
-      <video id="video" ref="videoRef" playsinline :width="width" :height="height"></video>
-      <canvas id="view" ref="viewRef"></canvas>
+      <video id="video" ref="videoElement" playsinline></video>
+      <canvas id="view" ref="outputCanvas"></canvas>
       <img id="background" v-show="!!currentBackground" :src="currentBackground" alt="" />
       <audio :src="shutterMp3" :loop="false" :volume="0.7" v-show="false" ref="audioShutter"></audio>
     </div>
-    <div class="footer" :class="clsHideControl" ref="controlRef">
+    <div class="footer" ref="controlRef">
       <Control
         :photo="lastPhoto"
+        :cameras="cameras"
         @switchCamera="switchCamera"
         @shutter-click="handlePhotoClick"
         @openBackgroundDialog="handleOpenBackgroundDialog"
@@ -26,27 +27,21 @@
 <script setup lang="ts">
 import BackgroundDialog from './BackgroundDialog.vue';
 import Control from './Contols.vue';
-import Camera from '@paddlejs-mediapipe/camera';
 import * as Mousetrap from 'mousetrap';
-//import * as humanseg from '@paddlejs-models/humanseg/lib/index_gpu';
 import * as humanseg from '../paddle/index_gpu';
 import { computed, onMounted, ref, watchEffect } from 'vue';
-import { useElementBounding, useEventListener, useTimeout } from '@vueuse/core';
+import { useElementBounding } from '@vueuse/core';
 import shutterMp3 from '../assets/camera-shutter.mp3?asset';
-
+import useCamera from './useCamera';
+import useAutoHide from './useAutoHide';
 const viewport = ref<HTMLDivElement>();
-const viewRef = ref<HTMLCanvasElement>();
-const videoRef = ref<HTMLVideoElement>();
-const controlRef = ref<HTMLDivElement>();
-// import { ElDialog, ElButton } from 'element-plus';
+const { outputCanvas, videoElement, cameras, switchCamera, updateBackground, takePhoto, videoSize } = useCamera();
+const { container: controlRef } = useAutoHide();
 const { width, height } = useElementBounding(viewport);
 const bgImgs = ref<{ default: string[]; user: string[] }>();
-let camera: Camera | null;
 const dialogBackgroundVisible = ref<boolean>(false);
-const backgroundCanvas = document.createElement('canvas') as HTMLCanvasElement;
 const audioShutter = ref<HTMLAudioElement>();
 const lastPhoto = ref<string>();
-const cameraStart = ref<boolean>(false);
 const allBgImgs = computed(() => {
   return bgImgs.value?.default.concat(bgImgs.value.user) || [];
 });
@@ -56,35 +51,30 @@ window.api.onBackgroundImageUpdate((imgs) => {
 });
 const currentBackground = ref<string>();
 const modelConfig = ref<string>('ppsegv2');
-const clsHideControl = ref<string>();
-const { start: startTimer, stop: stopTimer } = useTimeout(5000, {
-  controls: true,
-  callback: () => {
-    clsHideControl.value = 'hide';
-  },
-});
-useEventListener(controlRef, 'mouseenter', (_evt) => {
-  clsHideControl.value = '';
-  stopTimer?.();
-});
-useEventListener(controlRef, 'mouseleave', (_evt) => {
-  startTimer?.();
-});
-async function getVideoInputs() {
-  if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
-    console.log('enumerateDevices() not supported.');
-    return [];
+watchEffect(() => {
+  if (!outputCanvas.value) {
+    return;
   }
-
-  const devices = await navigator.mediaDevices.enumerateDevices();
-
-  const videoDevices = devices.filter((device) => device.kind === 'videoinput');
-
-  return videoDevices;
-}
+  outputCanvas.value!.style.transformOrigin = 'left top';
+  // always 16/9 保持宽高比不变缩放
+  const ratio = videoSize.width / videoSize.height;
+  let scale, xOffset, yOffset;
+  if (width.value / height.value > ratio) {
+    // 如果放缩后屏幕【宽】，就用屏幕高度计算放缩
+    scale = height.value / videoSize.height;
+    xOffset = (width.value - videoSize.width * scale) / 2 / scale;
+    yOffset = (height.value - videoSize.height * scale) / 2 / scale;
+    // 设置新算出来的scale
+  } else {
+    // 如果放缩后屏幕【窄】，就用屏幕宽度计算放缩
+    // 设置新算出来的scale
+    scale = width.value / videoSize.width;
+    xOffset = (width.value - videoSize.width * scale) / 2 / scale;
+    yOffset = (height.value - videoSize.height * scale) / 2 / scale;
+  }
+  outputCanvas.value!.style.transform = `scale(${scale}) translate( ${xOffset}px, ${yOffset}px )`;
+});
 onMounted(async () => {
-  const inputs = await getVideoInputs();
-  console.log(inputs);
   Mousetrap.bind(['up', 'down', 'pageup', 'pagedown', 'left', 'right', 'enter', 'tab', 'space'], function (_e, combo) {
     onKeyboardShortcuts(combo);
   });
@@ -100,53 +90,19 @@ onMounted(async () => {
   }
   console.log(modelUrl, 'modelUrl');
   await humanseg.load({}, modelUrl);
-  camera = new Camera(videoRef.value!, {
-    mirror: true,
-    enableOnInactiveState: true,
-    onSuccess: () => {
-      cameraStart.value = true;
-    },
-    onError: (e) => {
-      alert(e.message || '开启摄像头错误');
-    },
-    onFrame: async (video) => {
-      const view = viewRef.value!;
-      if (!!currentBackground.value) {
-        humanseg.drawHumanSeg(video, view, backgroundCanvas);
-      } else {
-        view.width = video.width;
-        view.height = video.height;
-        view.getContext('2d')?.drawImage(video, 0, 0, video.width, video.height);
-      }
-    },
-    videoLoaded: () => {
-      camera!.start();
-    },
-  });
 });
-const handlePhotoClick = () => {
-  if (!camera || !cameraStart.value) {
-    return;
-  }
+const handlePhotoClick = async () => {
   audioShutter.value?.play();
-  camera!.pause();
-  const source = viewRef.value!;
-  const imageUrl = source.toDataURL('image/jpeg');
-  lastPhoto.value = imageUrl;
-  window.api.savePhoto(imageUrl);
-  setTimeout(() => {
-    camera!.start();
-  }, 500);
+  const imageUrl = await takePhoto();
+  if (imageUrl) {
+    lastPhoto.value = imageUrl;
+    window.api.savePhoto(imageUrl);
+  }
 };
 const handleOpenBackgroundDialog = () => {
   dialogBackgroundVisible.value = true;
 };
-const switchCamera = () => {
-  if (!cameraStart.value) {
-    alert('请先开启摄像头');
-  }
-  camera?.switchCameras();
-};
+
 const onKeyboardShortcuts = (combo: string) => {
   switch (combo) {
     case 'up':
@@ -193,20 +149,9 @@ const handleOpenAlbum = () => {
 };
 watchEffect(() => {
   if (currentBackground.value) {
-    drawBackground(currentBackground.value);
+    updateBackground(currentBackground.value);
   }
 });
-function drawBackground(imageUrl: string) {
-  const bgCanvas = backgroundCanvas!;
-  const ctx = bgCanvas?.getContext('2d')!;
-  const backgroundImg = new Image();
-  backgroundImg.src = imageUrl;
-  backgroundImg.onload = () => {
-    bgCanvas.width = backgroundImg.naturalWidth || backgroundImg.width;
-    bgCanvas.height = backgroundImg.naturalHeight || backgroundImg.height;
-    ctx?.drawImage(backgroundImg, 0, 0, backgroundImg.width, backgroundImg.height);
-  };
-}
 </script>
 <style lang="scss">
 .camera {
@@ -230,6 +175,7 @@ function drawBackground(imageUrl: string) {
     z-index: 100;
     opacity: 0.7;
     transition: opacity 0.8s ease;
+    height: 84px;
     &.hide {
       opacity: 0;
     }
@@ -238,7 +184,7 @@ function drawBackground(imageUrl: string) {
     flex: 1;
     position: relative;
     overflow: hidden;
-    max-height: 100vh;
+    max-height: 100vh; //calc(100vh - 84px);
     #video {
       position: absolute;
       top: 0;
@@ -259,7 +205,7 @@ function drawBackground(imageUrl: string) {
       height: 100%;
       object-fit: fill;
       z-index: 0;
-      opacity: 0.9;
+      opacity: 0;
     }
   }
 }
