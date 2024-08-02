@@ -1,33 +1,44 @@
 <template>
-  <el-dialog
-    width="80%"
-    height="80%"
-    class="back-dialog"
-    :modelValue="modelValue"
-    @close="onClose"
-    title="设置背景图片"
-  >
-    <div class="upload-bg">
-      <el-button @click="handleAddBackgroundClick">添加背景图 </el-button>
-    </div>
-    <div class="image-list">
-      <div
-        class="image-item"
-        v-for="image in images"
-        :key="image"
-        @click="selectImage(image)"
-        :class="{ 'selected-image': image === selected }"
-      >
-        <img :src="image" alt="" />
+  <el-dialog width="60%" class="back-dialog" :modelValue="modelValue" @close="onClose" title="设置背景">
+    <div class="bg-settings">
+      <div class="image-list">
+        <div
+          class="image-item"
+          v-for="image in images"
+          :key="image"
+          @click="selectImage(image)"
+          :class="{ 'selected-image': image === selected }"
+        >
+          <img :src="image" alt="" />
+        </div>
+        <div
+          @click="selectImage('none')"
+          class="image-item"
+          :class="{ 'selected-image': !selected || images.length === 0 || selected == 'none' }"
+        >
+          无背景
+        </div>
+        <div
+          @click="selectImage('bokehEffect')"
+          class="image-item bokeh"
+          :class="{ 'selected-image': selected === 'bokehEffect' }"
+        >
+          背景虚化
+        </div>
       </div>
-      <div @click="selectImage('')" class="image-item" :class="{ 'selected-image': !selected || images.length === 0 }">
-        无背景
-      </div>
     </div>
+    <template #footer>
+      <div class="dialog-footer">
+        <el-button type="primary" plain @click="handleAddBackgroundClick" :icon="Plus">添加背景图 </el-button>
+
+        <el-button type="primary" @click="onClose()"> 确定 </el-button>
+      </div>
+    </template>
   </el-dialog>
 </template>
 <script setup lang="ts">
 import { ElDialog, ElButton } from 'element-plus';
+import { Plus } from '@element-plus/icons-vue';
 defineProps<{
   images: string[];
   selected?: string;
@@ -49,12 +60,28 @@ const onClose = () => {
 };
 </script>
 <style lang="scss" scoped>
+@media screen and (min-width: 1920px) {
+  :deep(.el-dialog) {
+    --el-dialog-width: 640px;
+  }
+}
+
+.dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
 .selected-image {
   border: 2px solid rgb(25, 84, 128);
 }
-.upload-bg {
-  margin-bottom: 12p;
+.bg-settings {
+  padding: 24px;
+  background-color: #eaeaea;
+  border-radius: 4px;
+  max-height: 320px;
+  overflow-y: auto;
 }
+
 .image-list {
   display: flex;
   flex-direction: row;
@@ -75,6 +102,11 @@ const onClose = () => {
     align-items: center;
     padding: 4px;
     margin: 4px;
+    &.bokeh {
+      background-image: url('../assets/bg-bokeh.jpg');
+      background-repeat: no-repeat;
+      background-size: cover;
+    }
     > img {
       width: 100%;
       height: 100%;

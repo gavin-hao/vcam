@@ -561,10 +561,20 @@
     lodash "^4.17.15"
     tmp-promise "^3.0.2"
 
+"@mediapipe/pose@^0.5.1675469404":
+  version "0.5.1675469404"
+  resolved "https://registry.npmmirror.com/@mediapipe/pose/-/pose-0.5.1675469404.tgz#8f81e64c6561b2357a021a134b54de0204bafc72"
+  integrity sha512-DFZsNWTsSphRIZppnUCuunzBiHP2FdJXR9ehc7mMi4KG+oPaOH0Em3d6kr7Py+TSyTXC1doH88KcF28k2sBxsQ==
+
 "@mediapipe/selfie_segmentation@^0.1.1675465747":
   version "0.1.1675465747"
   resolved "https://registry.npmmirror.com/@mediapipe/selfie_segmentation/-/selfie_segmentation-0.1.1675465747.tgz#f1f61eb116bf2efc262faf0a49a1829f4bae2712"
   integrity sha512-IxYxNhwE5VwOm52L1yoFWYLP7q9Pd+NJjzOC5tlepfvEGaY3o9hslhUrx9BgseqdfZtKSDtd/4NfCSMjNzQalA==
+
+"@mediapipe/tasks-vision@^0.10.14":
+  version "0.10.14"
+  resolved "https://registry.npmmirror.com/@mediapipe/tasks-vision/-/tasks-vision-0.10.14.tgz#16c5ddc513408f2a416ccc6ce8ccc797ee02da3b"
+  integrity sha512-vOifgZhkndgybdvoRITzRkIueWWSiCKuEUXXK6Q4FaJsFvRJuwgg++vqFUMlL0Uox62U5aEXFhHxlhV7Ja5e3Q==
 
 "@nodelib/fs.scandir@2.1.5":
   version "2.1.5"
@@ -756,6 +766,13 @@
     "@types/offscreencanvas" "~2019.3.0"
     "@types/seedrandom" "^2.4.28"
     seedrandom "^3.0.5"
+
+"@tensorflow/tfjs-backend-webgpu@^4.20.0":
+  version "4.20.0"
+  resolved "https://registry.npmmirror.com/@tensorflow/tfjs-backend-webgpu/-/tfjs-backend-webgpu-4.20.0.tgz#02ef4d1effd8ca603ee16111a994c5574019d4d2"
+  integrity sha512-d+mooh89bl+j29T282nE+lMs2ZKQdTC+0TezdjF4DvOd/YadShUtdrvEg+uWlA3631l1egEhSy/ah8n9mcVgAg==
+  dependencies:
+    "@tensorflow/tfjs-backend-cpu" "4.20.0"
 
 "@tensorflow/tfjs-converter@^4.20.0":
   version "4.20.0"

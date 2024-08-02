@@ -18,6 +18,7 @@ export default defineConfig(({ mode }) => {
           '@renderer': resolve('src/renderer/src'),
         },
       },
+      assetsInclude: ['**/*.wasm', '**/*.tflite', '**/*.binarypb'],
       // publicDir: 'resources',
       // build: {
       //   copyPublicDir: false,

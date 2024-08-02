@@ -28,14 +28,13 @@
 import BackgroundDialog from './BackgroundDialog.vue';
 import Control from './Contols.vue';
 import * as Mousetrap from 'mousetrap';
-import * as humanseg from '../paddle/index_gpu';
-import { computed, onMounted, ref, watchEffect } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watchEffect } from 'vue';
 import { useElementBounding } from '@vueuse/core';
 import shutterMp3 from '../assets/camera-shutter.mp3?asset';
 import useCamera from './useCamera';
 import useAutoHide from './useAutoHide';
 const viewport = ref<HTMLDivElement>();
-const { outputCanvas, videoElement, cameras, switchCamera, updateBackground, takePhoto, videoSize } = useCamera();
+const { outputCanvas, videoElement, cameras, switchCamera, setVisualizationMode, takePhoto, videoSize } = useCamera();
 const { container: controlRef } = useAutoHide();
 const { width, height } = useElementBounding(viewport);
 const bgImgs = ref<{ default: string[]; user: string[] }>();
@@ -45,21 +44,19 @@ const lastPhoto = ref<string>();
 const allBgImgs = computed(() => {
   return bgImgs.value?.default.concat(bgImgs.value.user) || [];
 });
-const models = ref<Array<{ key: string; path: string }>>();
 window.api.onBackgroundImageUpdate((imgs) => {
   bgImgs.value = imgs;
 });
 const currentBackground = ref<string>();
-const modelConfig = ref<string>('ppsegv2');
 watchEffect(() => {
   if (!outputCanvas.value) {
     return;
   }
   outputCanvas.value!.style.transformOrigin = 'left top';
   // always 16/9 保持宽高比不变缩放
-  const ratio = videoSize.width / videoSize.height;
+  const aspect = videoSize.width / videoSize.height;
   let scale, xOffset, yOffset;
-  if (width.value / height.value > ratio) {
+  if (width.value / height.value > aspect) {
     // 如果放缩后屏幕【宽】，就用屏幕高度计算放缩
     scale = height.value / videoSize.height;
     xOffset = (width.value - videoSize.width * scale) / 2 / scale;
@@ -79,17 +76,6 @@ onMounted(async () => {
     onKeyboardShortcuts(combo);
   });
   await window.api.getBackgroundImages();
-  models.value = (await window.api.getModelFiles()) || [];
-  if (!models.value) {
-    alert('加载模型错误');
-    return;
-  }
-  const modelUrl = models.value.find((m) => m.key === modelConfig.value)?.path;
-  if (!modelUrl) {
-    return;
-  }
-  console.log(modelUrl, 'modelUrl');
-  await humanseg.load({}, modelUrl);
 });
 const handlePhotoClick = async () => {
   audioShutter.value?.play();
@@ -125,10 +111,10 @@ const onKeyboardShortcuts = (combo: string) => {
 };
 const switchBackground = (forword: boolean) => {
   if (!allBgImgs.value?.length) {
-    currentBackground.value = undefined;
+    currentBackground.value = 'none';
   }
-  const array = [...allBgImgs.value, ''];
-  const cur = currentBackground.value || '';
+  const array = [...allBgImgs.value, 'none', 'bokehEffect'];
+  const cur = currentBackground.value || 'none';
   const currentIndex = array.findIndex((i) => i == cur);
   let next = currentIndex;
   if (forword) {
@@ -148,9 +134,14 @@ const handleOpenAlbum = () => {
   window.api.openPhotosDir();
 };
 watchEffect(() => {
-  if (currentBackground.value) {
-    updateBackground(currentBackground.value);
+  if (currentBackground.value === 'none' || currentBackground.value === 'bokehEffect') {
+    setVisualizationMode(currentBackground.value);
+  } else if (currentBackground.value != null) {
+    setVisualizationMode('virtualBackground', currentBackground.value);
   }
+});
+onUnmounted(() => {
+  Mousetrap.rest?.();
 });
 </script>
 <style lang="scss">

@@ -83,7 +83,7 @@ export class Camera {
         // mobile devices accept the default size.
         width: $size.width,
         height: $size.height,
-        // facingMode: 'environment',
+        // facingMode: 'user',
         frameRate: {
           ideal: targetFPS,
         },

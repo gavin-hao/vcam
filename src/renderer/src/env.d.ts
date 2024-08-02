@@ -8,3 +8,5 @@
 // }
 
 declare module '*.mp3?asset';
+
+declare module '*.wasm?asset';

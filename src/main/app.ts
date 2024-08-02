@@ -114,15 +114,22 @@ const getModels = async () => {
   let modelAbsolutePaths = paths.map((p) => {
     return { path: path.resolve(modelBaseDir, p), key: p };
   });
-  console.log(modelAbsolutePaths, process.env['ELECTRON_RENDERER_URL'],'paths')
+  console.log(modelAbsolutePaths, process.env['ELECTRON_RENDERER_URL'], 'paths');
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     modelAbsolutePaths = modelAbsolutePaths.map((p) => {
       return { path: process.env['ELECTRON_RENDERER_URL'] + path.join('/@fs/', p.path), key: p.key };
     });
   }
-  console.log(modelAbsolutePaths, 1111)
+  console.log(modelAbsolutePaths, 1111);
   return modelAbsolutePaths;
 };
+// const getMediapipeWasmPath = async () => {
+//   let wasmPath = path.join(resourcesBasePath, 'wasm');
+//   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+//     wasmPath = process.env['ELECTRON_RENDERER_URL'] + path.join('/@fs/', wasmPath);
+//   }
+//   return wasmPath;
+// };
 export default class Application {
   mainWindow: BrowserWindow;
   constructor(mainWindow: BrowserWindow) {
@@ -134,5 +141,6 @@ export default class Application {
     ipcMain.on(ipcMessage.openPhotosDir, () => openPhotosDirectory());
     ipcMain.on(ipcMessage.getBackgroundImages, () => getBackgroundImages(this.mainWindow));
     ipcMain.handle(ipcMessage.getModelFiles, () => getModels());
+    // ipcMain.handle('getMediapipeWasmPath', () => getMediapipeWasmPath());
   }
 }

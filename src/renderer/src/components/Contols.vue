@@ -2,7 +2,7 @@
   <div class="controls">
     <div class="left">
       <button class="setting-btn" aria-label="设置背景图" title="设置背景" @click="handleBackgroundSettingClick">
-        <el-icon :size="32"><Picture /></el-icon>
+        <el-icon :size="24"><Setting /></el-icon>
       </button>
       <el-dropdown v-if="cameras.length > 1" trigger="click" @command="handleSwitchCamera">
         <button
@@ -30,14 +30,14 @@
         <img :src="photo" alt="" />
       </div>
       <button class="setting-btn" title="相册" @click="handleAlbumlick">
-        <el-icon :size="32"><Files /></el-icon>
+        <el-icon :size="24"><Files /></el-icon>
       </button>
     </div>
   </div>
 </template>
 <script setup lang="ts">
 import { ref } from 'vue';
-import { VideoCamera, Picture, Files } from '@element-plus/icons-vue';
+import { VideoCamera, Picture, Setting, Files } from '@element-plus/icons-vue';
 import { ElIcon, ElDropdown, ElDropdownMenu, ElDropdownItem } from 'element-plus';
 
 const buttonRef = ref();
