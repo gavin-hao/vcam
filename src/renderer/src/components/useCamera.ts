@@ -1,17 +1,16 @@
-import { onMounted, onUnmounted, ref, shallowRef, triggerRef, watchEffect } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
 import { Camera, type CameraOption, getVideoInputs } from '../lib/camera';
 import { setupStats } from '@renderer/lib/stats';
-
+import * as tf from '@tensorflow/tfjs-core';
 import {
   createSegmenter,
-  type ImageType,
   drawVirtualBackground,
   HumanSegSegmenter,
-  createHumanSegSegmentor,
+  // createHumanSegSegmentor,
   createBlazePoseSegmenter,
+  createBodyPixSegmenter,
   flipCanvasHorizontal,
 } from './segmenter';
-// import { createImageSegmenter, type ImageSegmenter } from './mediapipe';
 import * as bodySegmentation from '@tensorflow-models/body-segmentation';
 import { Segmentation } from '@tensorflow-models/body-segmentation/dist/shared/calculators/interfaces/common_interfaces';
 
@@ -26,9 +25,10 @@ export const VIDEO_SIZE = {
 } as const;
 let stats;
 // let imageSegmenter: ImageSegmenter;
-let segmenter: bodySegmentation.BodySegmenter | null;
+let segmenter: Awaited<ReturnType<typeof createSegmenter>> | null;
 let humansegSegmenter: HumanSegSegmenter | null;
 let blazeposeSegmentor: Awaited<ReturnType<typeof createBlazePoseSegmenter>> | null;
+let bodypixSegmentor: Awaited<ReturnType<typeof createBodyPixSegmenter>> | null;
 let rafId: number;
 const resetTime = {
   startInferenceTime: 0,
@@ -71,6 +71,8 @@ const useCamera = () => {
     canvas: outputCanvas.value,
     deviceId: undefined,
   };
+  // const canvas = document.createElement('canvas') as HTMLCanvasElement;
+  // canvas.id = 'tempRender';
   let isCameraChanged = false;
   const cameras = ref<MediaDeviceInfo[]>([]);
 
@@ -100,11 +102,13 @@ const useCamera = () => {
     }
     cameraOption.canvas = outputCanvas.value;
     camera = await Camera.setupCamera(videoElement.value!, cameraOption);
+    await tf.setBackend('webgl');
+    // await tf.ready();
 
     segmenter = await createSegmenter(models);
-    humansegSegmenter = await createHumanSegSegmentor(models, camera.video.width, camera.video.height);
+    // humansegSegmenter = await createHumanSegSegmentor(models, camera.video.width, camera.video.height);
     blazeposeSegmentor = await createBlazePoseSegmenter(models);
-
+    bodypixSegmentor = await createBodyPixSegmenter(models);
     // imageSegmenter = await createImageSegmenter();
 
     runRAF();
@@ -179,7 +183,7 @@ const useCamera = () => {
     // });
     rafId = requestAnimationFrame(runRAF);
   };
-  let modelType: 'humanseg' | 'blazepose' | 'mpBodyseg' = 'blazepose';
+  let modelType: 'humanseg' | 'blazepose' | 'mpBodyseg' | 'bodypix' = 'mpBodyseg';
   async function renderResult() {
     if (isDev) {
       //统计模型性能
@@ -193,6 +197,8 @@ const useCamera = () => {
     } else if (modelType === 'mpBodyseg') {
       // 使用 @tensorflow-models/body-segmentation . @mediapipe/selfie_segmentation'
       await renderBodySegmentationPrediction();
+    } else if (modelType === 'bodypix') {
+      await renderBodypixSegmentationPrediction();
     }
     if (isDev) {
       endEstimateSegmentationStats(modelTime);
@@ -222,7 +228,6 @@ const useCamera = () => {
           flipHorizontal: false,
           multiSegmentation: false,
           segmentBodyParts: false,
-          // segmentationThreshold: STATE.visualization.foregroundThreshold,
         });
       } catch (error) {
         segmenter.dispose();
@@ -230,8 +235,8 @@ const useCamera = () => {
         alert(error);
       }
       //@ts-ignore
-      const gl = window.exposedContext;
-      if (gl) gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
+      // const gl = window.exposedContext;
+      // if (gl) gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
 
       if (segmentation && segmentation.length) {
         const options = {
@@ -245,10 +250,9 @@ const useCamera = () => {
         };
 
         const canvas = camera?.canvas || outputCanvas.value!;
-        const ctx = canvas.getContext('2d')!;
         //背景替换
         if (visualizationMode.value === 'virtualBackground' && bgLoaded) {
-          drawVirtualBackground(
+          await drawVirtualBackground(
             canvas,
             camera?.video!,
             segmentation,
@@ -270,8 +274,12 @@ const useCamera = () => {
             options.flipHorizontal
           );
         } else {
+          const ctx = canvas.getContext('2d')!;
+          ctx.save();
+          flipCanvasHorizontal(ctx.canvas);
           // 输出原始图像
           camera!.drawFromVideo(ctx);
+          ctx.restore();
         }
       }
     }
@@ -301,10 +309,9 @@ const useCamera = () => {
         drawContour: false,
       };
       const canvas = camera?.canvas || outputCanvas.value!;
-      const ctx = canvas.getContext('2d')!;
       //背景替换
       if (visualizationMode.value === 'virtualBackground' && bgLoaded) {
-        drawVirtualBackground(
+        await drawVirtualBackground(
           canvas,
           camera?.video!,
           segmentation,
@@ -326,8 +333,82 @@ const useCamera = () => {
           options.flipHorizontal
         );
       } else {
+        const ctx = canvas.getContext('2d')!;
+        ctx.save();
+        flipCanvasHorizontal(ctx.canvas);
         // 输出原始图像
         camera!.drawFromVideo(ctx);
+        ctx.restore();
+      }
+    }
+  }
+  async function renderBodypixSegmentationPrediction(isTakePhoto?: boolean) {
+    let segmentation: Segmentation[] | null = null;
+    // Segmenter can be null if initialization failed (for example when loading
+    // from a URL that does not exist).
+    if (bodypixSegmentor != null) {
+      try {
+        segmentation = await bodypixSegmentor.segmentPeople(camera!.video, {
+          flipHorizontal: false,
+          multiSegmentation: false,
+          segmentBodyParts: false,
+          internalResolution: 'high',
+          segmentationThreshold: 0.7,
+        });
+      } catch (error) {
+        bodypixSegmentor.dispose();
+        bodypixSegmentor = null;
+        alert(error);
+      }
+      if (segmentation && segmentation.length) {
+        if (isTakePhoto) {
+          console.log('run when click `takePhoto button`');
+        }
+        const options = {
+          foregroundThreshold: 0.7,
+          maskOpacity: 1,
+          maskBlur: 0,
+          flipHorizontal: true,
+          backgroundBlur: 5,
+          edgeBlur: 1,
+          drawContour: false,
+        };
+
+        const canvas = camera?.canvas || outputCanvas.value!;
+        canvas.width = camera!.video.width;
+        canvas.height = camera!.video.height;
+        //背景替换
+        if (visualizationMode.value === 'virtualBackground' && bgLoaded) {
+          await drawVirtualBackground(
+            canvas,
+            camera?.video!,
+            segmentation,
+            bgCanvas,
+            options.foregroundThreshold,
+            2,
+            options.edgeBlur,
+            options.flipHorizontal
+          );
+        } else if (visualizationMode.value === 'bokehEffect') {
+          // 虚化背景
+          await bodySegmentation.drawBokehEffect(
+            canvas,
+            camera!.video,
+            segmentation,
+            options.foregroundThreshold,
+            options.backgroundBlur,
+            options.edgeBlur,
+            options.flipHorizontal
+          );
+        } else {
+          const ctx = canvas.getContext('2d')!;
+          ctx.save();
+          flipCanvasHorizontal(ctx.canvas);
+          // 输出原始图像
+          camera!.drawFromVideo(ctx);
+          ctx.restore();
+        }
+        // camera?.drawToCanvas(canvas);
       }
     }
   }
@@ -365,10 +446,14 @@ const useCamera = () => {
       return;
     }
     camera.pause();
+    camera.clearCtx();
+    cancelAnimationFrame(rafId);
+    await renderBodypixSegmentationPrediction(true);
     const img = outputCanvas.value?.toDataURL();
     setTimeout(() => {
       camera!.start();
-    }, 500);
+      runRAF();
+    }, 800);
     return img;
   };
   onUnmounted(() => {

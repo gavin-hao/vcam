@@ -120,8 +120,20 @@ const getModels = async () => {
       return { path: process.env['ELECTRON_RENDERER_URL'] + path.join('/@fs/', p.path), key: p.key };
     });
   }
-  console.log(modelAbsolutePaths, 1111);
+  // console.log(modelAbsolutePaths, 1111);
   return modelAbsolutePaths;
+};
+const removeBackgroundImage = async (filepath: string, mainWindow: BrowserWindow) => {
+  // if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+  //   filepath = filepath.replace(/^\/@fs/i, '');
+  // }
+  // console.log('removeBackgroundImage', filepath);
+  try {
+    fs.unlinkSync(filepath);
+    getBackgroundImages(mainWindow);
+  } catch (error) {
+    console.error(error);
+  }
 };
 // const getMediapipeWasmPath = async () => {
 //   let wasmPath = path.join(resourcesBasePath, 'wasm');
@@ -141,6 +153,7 @@ export default class Application {
     ipcMain.on(ipcMessage.openPhotosDir, () => openPhotosDirectory());
     ipcMain.on(ipcMessage.getBackgroundImages, () => getBackgroundImages(this.mainWindow));
     ipcMain.handle(ipcMessage.getModelFiles, () => getModels());
+    ipcMain.on(ipcMessage.removeBackgroundImage, (_, img) => removeBackgroundImage(img, this.mainWindow));
     // ipcMain.handle('getMediapipeWasmPath', () => getMediapipeWasmPath());
   }
 }

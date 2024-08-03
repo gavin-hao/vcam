@@ -5,6 +5,7 @@ type BackgroundImages = { default: string[]; user: string[] };
 export const api = {
   addBackgroundImage: () => ipcRenderer.invoke(ipcMessage.addBackgroundImage),
   savePhoto: (base64: string) => ipcRenderer.send(ipcMessage.savePhoto, base64),
+  removeBackgroundImage: (filePath: string) => ipcRenderer.send(ipcMessage.removeBackgroundImage, filePath),
   getBackgroundImages: () => ipcRenderer.send(ipcMessage.getBackgroundImages),
   onBackgroundImageUpdate: (callback: (filePaths: BackgroundImages) => void) =>
     ipcRenderer.on(ipcMessage.onBackgroundImageUpdate, (_event, value: BackgroundImages) => callback(value)),

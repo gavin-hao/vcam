@@ -9,6 +9,9 @@
           @click="selectImage(image)"
           :class="{ 'selected-image': image === selected }"
         >
+          <div class="delete-btn" @click="handleRemoveBg(image)">
+            <el-icon><Close /></el-icon>
+          </div>
           <img :src="image" alt="" />
         </div>
         <div
@@ -37,8 +40,8 @@
   </el-dialog>
 </template>
 <script setup lang="ts">
-import { ElDialog, ElButton } from 'element-plus';
-import { Plus } from '@element-plus/icons-vue';
+import { ElDialog, ElButton, ElIcon } from 'element-plus';
+import { Plus, Close } from '@element-plus/icons-vue';
 defineProps<{
   images: string[];
   selected?: string;
@@ -54,6 +57,9 @@ const handleAddBackgroundClick = async () => {
 };
 const selectImage = (img?: string) => {
   emits('change', img);
+};
+const handleRemoveBg = async (img: string) => {
+  await window.api.removeBackgroundImage(img);
 };
 const onClose = () => {
   emits('update:modelValue', false);
@@ -102,6 +108,7 @@ const onClose = () => {
     align-items: center;
     padding: 4px;
     margin: 4px;
+    position: relative;
     &.bokeh {
       background-image: url('../assets/bg-bokeh.jpg');
       background-repeat: no-repeat;
@@ -112,6 +119,24 @@ const onClose = () => {
       height: 100%;
       object-fit: contain;
       display: inline-block;
+    }
+    .delete-btn {
+      position: absolute;
+      right: 0px;
+      top: 0px;
+      display: none;
+      color: #fff;
+      cursor: pointer;
+      font-size: 12px;
+      padding: 4px;
+      line-height: 0;
+      border-radius: 50%;
+      background-color: rgba(#666, 0.7);
+    }
+    &:hover {
+      .delete-btn {
+        display: block;
+      }
     }
   }
 }
