@@ -11,5 +11,5 @@ export const api = {
     ipcRenderer.on(ipcMessage.onBackgroundImageUpdate, (_event, value: BackgroundImages) => callback(value)),
   getModelFiles: () => ipcRenderer.invoke(ipcMessage.getModelFiles),
   openPhotosDir: () => ipcRenderer.send(ipcMessage.openPhotosDir),
-  // getMediapipeWasmPath: () => ipcRenderer.invoke('getMediapipeWasmPath'),
+  getMediapipeWasmPath: () => ipcRenderer.invoke('getMediapipeWasmPath'),
 } as const;

@@ -1,45 +1,54 @@
-import { ImageSegmenter, FilesetResolver, ImageSegmenterResult } from '@mediapipe/tasks-vision';
-import modelAssetPath from '../../../../resources/models/mediapipe_selfie_segs/selfie_segmenter.tflite?url';
+import { ImageSegmenter, FilesetResolver, GestureRecognizer, DrawingUtils } from '@mediapipe/tasks-vision';
+// const mediapipe = require('@mediapipe/tasks-vision');
+// console.log('mediapipe', mediapipe);
+// const path = require('path');
+// let cwd = process.cwd();
+// console.log('process', process);
+// if (process.env.NODE_ENV !== 'development') {
+//   cwd = process.resourcesPath;
+// }
+// let unpackedPath = path.join(cwd, './app.asar.unpacked');
+// if (process.env.NODE_ENV === 'development') {
+//   // 开发环境将该目录指向 项目根目录
+//   unpackedPath = cwd;
+//   // 开发环境 将文件存储位置指向 {项目根目录}/.vcam
+// }
+const mediapipeUrl = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3'; //path.join('/@fs/', unpackedPath, 'node_modules', '@mediapipe/tasks-vision/vision_bundle.cjs');
+// importScripts('../../../../node_modules/@mediapipe/tasks-vision');
+
+// import modelAssetPath from '../../../../resources/gesture-models/gesture_recognizer.task?url';
+
 // import mediapipeWasm from '../assets/wasm';
 // console.log('mediapipeWasm', mediapipeWasm);
-let imageSegmenter: ImageSegmenter;
-export const createImageSegmenter = async () => {
-  const mediapipeWasm = await window.api.getMediapipeWasmPath();
+class Message {
+  action: string;
+  data: any;
+  constructor(action: 'initilized' | 'predictResult', data?: any) {
+    this.action = action;
+    this.data = data;
+  }
+  toString() {
+    return `{action:${this.action}, data:${this.data?.toString()}}`;
+  }
+}
 
-  const audio = await FilesetResolver.forVisionTasks(mediapipeWasm);
-  imageSegmenter = await ImageSegmenter.createFromOptions(audio, {
+let gestureRecognizer: GestureRecognizer;
+// let wasmPath;
+const createImageSegmenter = async (wasmPath) => {
+  //const mediapipeWasm =  'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm'; //await window.api.getMediapipeWasmPath();
+
+  const vision = await FilesetResolver.forVisionTasks(wasmPath);
+  gestureRecognizer = await GestureRecognizer.createFromOptions(vision, {
     baseOptions: {
-      modelAssetPath,
+      // modelAssetPath,
+      modelAssetPath:
+        'https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task',
       delegate: 'GPU',
     },
     runningMode: 'VIDEO',
-    outputCategoryMask: true,
-    outputConfidenceMasks: false,
+    // outputCategoryMask: true,
+    // outputConfidenceMasks: false,
   });
-  return imageSegmenter;
+  // gestureRecognizer.recognizeForVideo()
+  return gestureRecognizer;
 };
-export { type ImageSegmenter } from '@mediapipe/tasks-vision';
-// let segmentations = [];
-// const segmentPerson = (video: HTMLVideoElement) => {
-//   imageSegmenter.segmentForVideo();
-// };
-// function onResult(result: ImageSegmenterResult) {
-//   let imageData = canvasCtx.getImageData(0, 0, video.videoWidth, video.videoHeight).data;
-//   const mask: Number[] = result.categoryMask.getAsFloat32Array();
-//   let j = 0;
-//   for (let i = 0; i < mask.length; ++i) {
-//     const maskVal = Math.round(mask[i] * 255.0);
-//     const legendColor = legendColors[maskVal % legendColors.length];
-//     imageData[j] = (legendColor[0] + imageData[j]) / 2;
-//     imageData[j + 1] = (legendColor[1] + imageData[j + 1]) / 2;
-//     imageData[j + 2] = (legendColor[2] + imageData[j + 2]) / 2;
-//     imageData[j + 3] = (legendColor[3] + imageData[j + 3]) / 2;
-//     j += 4;
-//   }
-//   const uint8Array = new Uint8ClampedArray(imageData.buffer);
-//   const dataNew = new ImageData(uint8Array, video.videoWidth, video.videoHeight);
-//   canvasCtx.putImageData(dataNew, 0, 0);
-//   if (webcamRunning === true) {
-//     window.requestAnimationFrame(predictWebcam);
-//   }
-// }

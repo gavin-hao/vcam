@@ -3,6 +3,7 @@
     <div class="viewport" ref="viewport">
       <video id="video" ref="videoElement" playsinline></video>
       <canvas id="view" ref="outputCanvas"></canvas>
+      <!-- <canvas id="hands" ref="gestureCanvas"></canvas> -->
       <img id="background" v-show="!!currentBackground" :src="currentBackground" alt="" />
       <audio :src="shutterMp3" :loop="false" :volume="0.7" v-show="false" ref="audioShutter"></audio>
     </div>
@@ -34,7 +35,8 @@ import shutterMp3 from '../assets/camera-shutter.mp3?asset';
 import useCamera from './useCamera';
 import useAutoHide from './useAutoHide';
 const viewport = ref<HTMLDivElement>();
-const { outputCanvas, videoElement, cameras, switchCamera, setVisualizationMode, takePhoto, videoSize } = useCamera();
+const { outputCanvas, gestureCanvas, videoElement, cameras, switchCamera, setVisualizationMode, takePhoto, videoSize } =
+  useCamera();
 const { container: controlRef } = useAutoHide();
 const { width, height } = useElementBounding(viewport);
 const bgImgs = ref<{ default: string[]; user: string[] }>();
@@ -188,6 +190,12 @@ onUnmounted(() => {
       position: relative;
       z-index: 1;
     }
+    // #hands {
+    //   position: absolute;
+    //   top: 0;
+    //   left: 0;
+    //   z-index: 2;
+    // }
     #background {
       position: absolute;
       top: 0;

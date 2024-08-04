@@ -277,7 +277,7 @@ export async function drawVirtualBackground(
   edgeBlurAmount = 3,
   flipHorizontal = false
 ) {
-  const ctx = canvas.getContext('2d')!;
+  const ctx = canvas.getContext('2d')! as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
   // canvas.width = image.width;
   // canvas.height = image.height;

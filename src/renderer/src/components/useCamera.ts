@@ -13,7 +13,33 @@ import {
 } from './segmenter';
 import * as bodySegmentation from '@tensorflow-models/body-segmentation';
 import { Segmentation } from '@tensorflow-models/body-segmentation/dist/shared/calculators/interfaces/common_interfaces';
+import {
+  type GestureRecognizerResult,
+  DrawingUtils,
+  GestureRecognizer,
+  FilesetResolver,
+} from '@mediapipe/tasks-vision';
+import modelAssetPath from '../../../../resources/gesture-models/gesture_recognizer.task?url';
+const createGestureRecognizer = async (wasmPath) => {
+  //const mediapipeWasm =  'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm'; //await window.api.getMediapipeWasmPath();
 
+  const vision = await FilesetResolver.forVisionTasks(wasmPath);
+  const gestureRecognizer = await GestureRecognizer.createFromOptions(vision, {
+    baseOptions: {
+      modelAssetPath,
+      // modelAssetPath:
+      //   'https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task',
+      delegate: 'GPU',
+    },
+    runningMode: 'VIDEO',
+    // outputCategoryMask: true,
+    // outputConfidenceMasks: false,
+  });
+  // gestureRecognizer.recognizeForVideo()
+  return gestureRecognizer;
+};
+// import GestureWorker from '../workers/gesture?worker&inline';
+// import GestureWorkerUrl from '../workers/gesture?url';
 /**
  * 支持的特效 虚拟背景｜背景虚化｜原始视频
  */
@@ -23,8 +49,11 @@ export const VIDEO_SIZE = {
   '720p': { width: 1280, height: 720 },
   '1080p': { width: 1920, height: 1080 },
 } as const;
+type ImageSource = ImageBitmap | ImageData | OffscreenCanvas | VideoFrame;
+// const gestureRecognizerWorker = new Worker(new URL('../workers/gesture', import.meta.url), { type: 'module' });
+const isDev = window.electron.process.env.NODE_ENV === 'development';
 let stats;
-// let imageSegmenter: ImageSegmenter;
+let gestureRecognizer: GestureRecognizer;
 let segmenter: Awaited<ReturnType<typeof createSegmenter>> | null;
 let humansegSegmenter: HumanSegSegmenter | null;
 let blazeposeSegmentor: Awaited<ReturnType<typeof createBlazePoseSegmenter>> | null;
@@ -48,7 +77,7 @@ function endEstimateSegmentationStats(time: StatsTime) {
   ++time.numInferences;
 
   const panelUpdateMilliseconds = 1000;
-  if (endInferenceTime - time.lastPanelUpdate >= panelUpdateMilliseconds) {
+  if (isDev && endInferenceTime - time.lastPanelUpdate >= panelUpdateMilliseconds) {
     const averageInferenceTime = time.inferenceTimeSum / time.numInferences;
     time.inferenceTimeSum = 0;
     time.numInferences = 0;
@@ -59,6 +88,8 @@ function endEstimateSegmentationStats(time: StatsTime) {
 
 const useCamera = () => {
   const outputCanvas = ref<HTMLCanvasElement>();
+  let gestureCanvas: HTMLCanvasElement;
+
   const videoElement = ref<HTMLVideoElement>();
   const videoSize = VIDEO_SIZE['720p'];
   const bgCanvas = document.createElement('canvas');
@@ -71,8 +102,23 @@ const useCamera = () => {
     canvas: outputCanvas.value,
     deviceId: undefined,
   };
-  // const canvas = document.createElement('canvas') as HTMLCanvasElement;
-  // canvas.id = 'tempRender';
+
+  // 使用单独worker线程处理手势识别
+  // gestureRecognizerWorker.onmessage = async (e) => {
+  //   const { action, data } = e.data || {};
+  //   switch (action) {
+  //     case 'initilized':
+  //       console.log('Message received from worker', e);
+
+  //       break;
+  //     case 'predictResult':
+  //       await onGesturePredictCallback(data);
+  //       console.log('predictResult:', data);
+  //       break;
+  //   }
+  // };
+  //用于存储摄像头原始图像
+  let canvas: OffscreenCanvas = new OffscreenCanvas(0, 0); //document.createElement('canvas') as HTMLCanvasElement;
   let isCameraChanged = false;
   const cameras = ref<MediaDeviceInfo[]>([]);
 
@@ -88,7 +134,36 @@ const useCamera = () => {
     isCameraChanged = true;
   };
 
-  const isDev = window.electron.process.env.NODE_ENV === 'development';
+  // 这里处理手势识别结果 控制界面操作
+  async function onGesturePredictCallback(predictResult: GestureRecognizerResult) {
+    const canvasCtx = gestureCanvas.getContext('2d')!;
+    canvasCtx.save();
+    canvasCtx.clearRect(0, 0, gestureCanvas.width, gestureCanvas.height);
+    const drawingUtils = new DrawingUtils(canvasCtx);
+
+    flipCanvasHorizontal(gestureCanvas);
+    if (predictResult.landmarks) {
+      for (const landmarks of predictResult.landmarks) {
+        drawingUtils.drawConnectors(landmarks, GestureRecognizer.HAND_CONNECTIONS, {
+          color: '#00FF00',
+          lineWidth: 5,
+        });
+        drawingUtils.drawLandmarks(landmarks, {
+          color: '#FF0000',
+          lineWidth: 2,
+        });
+      }
+    }
+    canvasCtx.restore();
+    if (predictResult.gestures.length > 0) {
+      // gestureOutput.style.display = "block";
+      // gestureOutput.style.width = videoWidth;
+      const categoryName = predictResult.gestures[0][0].categoryName;
+      const categoryScore = parseFloat((predictResult.gestures[0][0].score * 100).toString()).toFixed(2);
+      const handedness = predictResult.handednesses[0][0].displayName;
+      console.log(`GestureRecognizer: ${categoryName}\n Confidence: ${categoryScore} %\n Handedness: ${handedness}`);
+    }
+  }
   onMounted(async () => {
     cameras.value = await getVideoInputs();
     if (isDev) {
@@ -107,10 +182,25 @@ const useCamera = () => {
 
     segmenter = await createSegmenter(models);
     // humansegSegmenter = await createHumanSegSegmentor(models, camera.video.width, camera.video.height);
-    blazeposeSegmentor = await createBlazePoseSegmenter(models);
+    // blazeposeSegmentor = await createBlazePoseSegmenter(models);
     bodypixSegmentor = await createBodyPixSegmenter(models);
     // imageSegmenter = await createImageSegmenter();
+    // worker线程初始化 手势识别模型
+    const mediapipeWasm = await window.api.getMediapipeWasmPath();
+    gestureRecognizer = await createGestureRecognizer(mediapipeWasm);
 
+    gestureCanvas = document.createElement('canvas');
+    gestureCanvas.id = 'hands';
+    gestureCanvas.width = outputCanvas.value!.width;
+    gestureCanvas.height = outputCanvas.value!.height;
+    // gestureCanvas.style.transform = outputCanvas.value!.style.transform;
+    gestureCanvas.style.position = 'absolute';
+    gestureCanvas.style.left = '0';
+    gestureCanvas.style.top = '0';
+    gestureCanvas.style.zIndex = '10';
+
+    outputCanvas.value?.parentElement?.appendChild(gestureCanvas);
+    // gestureRecognizerWorker.postMessage({ action: 'init', data: { wasm: mediapipeWasm } });
     runRAF();
   });
   const checkOptionUpdate = async () => {
@@ -153,12 +243,20 @@ const useCamera = () => {
   //   [0, 161, 194, 255], // Vivid Blue
   // ];
   // let elapsed = 0;
+
   const runRAF = async (_prevTime: number = performance.now()) => {
     // const time = performance.now();
-    // elapsed += time - prevTime;
+    // elapsed += time - _prevTime;
     // if (elapsed > 1000 / 60) {
-    checkOptionUpdate();
-    renderResult();
+    await checkOptionUpdate();
+    //统计模型性能
+    beginEstimateSegmentationStats(modelTime);
+    await drawVideo(canvas, camera?.video!, false);
+
+    await predictGesture(canvas, _prevTime);
+
+    await renderSegmentPrediction();
+    endEstimateSegmentationStats(modelTime);
     // elapsed = 0;
     // }
     // let startTimeMs = performance.now();
@@ -183,25 +281,64 @@ const useCamera = () => {
     // });
     rafId = requestAnimationFrame(runRAF);
   };
-  let modelType: 'humanseg' | 'blazepose' | 'mpBodyseg' | 'bodypix' = 'mpBodyseg';
-  async function renderResult() {
-    if (isDev) {
-      //统计模型性能
-      beginEstimateSegmentationStats(modelTime);
+  async function drawVideo(
+    canvas: OffscreenCanvas | HTMLCanvasElement,
+    video: HTMLVideoElement,
+    flipHorizontal: boolean = false
+  ) {
+    const ctx = canvas.getContext('2d')! as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+    ctx.save();
+    const videoWidth = video.videoWidth;
+    const videoHeight = video.videoHeight;
+    canvas.width = videoWidth;
+    canvas.height = videoHeight;
+    if (flipHorizontal) {
+      flipCanvasHorizontal(ctx.canvas);
     }
+    ctx.drawImage(video, 0, 0, videoWidth, videoHeight);
+    // 输出原始图像
+    // camera!.drawFromVideo(ctx);
+    ctx.restore();
+    return canvas;
+  }
+  let elapsedTime = 0;
+  async function predictGesture(videoFrame: ImageSource, _prevTime: number = performance.now()) {
+    let time = performance.now();
+    elapsedTime += time - _prevTime;
+    let ratio = 1000 / 20;
+    if (elapsedTime < ratio) {
+      // console.log(`skip detect becasuse deltaTime ${elapsedTime} < ${ratio}`, elapsedTime, time, _prevTime);
+      // return;
+    }
+    let data;
+    if (videoFrame instanceof OffscreenCanvas) {
+      data = videoFrame
+        .getContext('2d', {
+          willReadFrequently: true,
+          colorSpace: 'srgb',
+        })
+        ?.getImageData(0, 0, videoFrame.width, videoFrame.height, { colorSpace: 'srgb' });
+    } else {
+      data = videoFrame;
+    }
+    const result = await gestureRecognizer.recognizeForVideo(data, performance.now());
+    await onGesturePredictCallback(result);
+    console.log('gestureRecognizerResult', result, elapsedTime, time, _prevTime);
+    elapsedTime = 0;
+  }
+
+  let modelType: 'humanseg' | 'blazepose' | 'mpSelfiSeg' | 'bodypix' = 'mpSelfiSeg';
+  async function renderSegmentPrediction() {
     if (modelType === 'humanseg') {
       // 当前人像分割模型使用的是ppseg
       await renderHumanSegPrediction();
     } else if (modelType === 'blazepose') {
       await renderBlazeposePrediction();
-    } else if (modelType === 'mpBodyseg') {
+    } else if (modelType === 'mpSelfiSeg') {
       // 使用 @tensorflow-models/body-segmentation . @mediapipe/selfie_segmentation'
       await renderBodySegmentationPrediction();
     } else if (modelType === 'bodypix') {
       await renderBodypixSegmentationPrediction();
-    }
-    if (isDev) {
-      endEstimateSegmentationStats(modelTime);
     }
   }
   async function renderHumanSegPrediction() {
@@ -243,13 +380,11 @@ const useCamera = () => {
           foregroundThreshold: 0.6,
           maskOpacity: 1,
           maskBlur: 0,
-          flipHorizontal: true,
+          flipHorizontal: false,
           backgroundBlur: 5,
           edgeBlur: 3,
           drawContour: false,
         };
-
-        const canvas = camera?.canvas || outputCanvas.value!;
         //背景替换
         if (visualizationMode.value === 'virtualBackground' && bgLoaded) {
           await drawVirtualBackground(
@@ -273,14 +408,16 @@ const useCamera = () => {
             options.edgeBlur,
             options.flipHorizontal
           );
-        } else {
-          const ctx = canvas.getContext('2d')!;
-          ctx.save();
-          flipCanvasHorizontal(ctx.canvas);
-          // 输出原始图像
-          camera!.drawFromVideo(ctx);
-          ctx.restore();
         }
+        //  else {
+        //   const ctx = canvas.getContext('2d')!;
+        //   ctx.save();
+        //   flipCanvasHorizontal(ctx.canvas);
+        //   // 输出原始图像
+        //   camera!.drawFromVideo(ctx);
+        //   ctx.restore();
+        // }
+        camera?.drawToCanvas(canvas);
       }
     }
   }
@@ -303,12 +440,12 @@ const useCamera = () => {
         foregroundThreshold: 0.6,
         maskOpacity: 1,
         maskBlur: 0,
-        flipHorizontal: true,
+        flipHorizontal: false,
         backgroundBlur: 5,
         edgeBlur: 3,
         drawContour: false,
       };
-      const canvas = camera?.canvas || outputCanvas.value!;
+      // const canvas = camera?.canvas || outputCanvas.value!;
       //背景替换
       if (visualizationMode.value === 'virtualBackground' && bgLoaded) {
         await drawVirtualBackground(
@@ -332,14 +469,8 @@ const useCamera = () => {
           options.edgeBlur,
           options.flipHorizontal
         );
-      } else {
-        const ctx = canvas.getContext('2d')!;
-        ctx.save();
-        flipCanvasHorizontal(ctx.canvas);
-        // 输出原始图像
-        camera!.drawFromVideo(ctx);
-        ctx.restore();
       }
+      camera?.drawToCanvas(canvas);
     }
   }
   async function renderBodypixSegmentationPrediction(isTakePhoto?: boolean) {
@@ -368,15 +499,11 @@ const useCamera = () => {
           foregroundThreshold: 0.7,
           maskOpacity: 1,
           maskBlur: 0,
-          flipHorizontal: true,
+          flipHorizontal: false,
           backgroundBlur: 5,
           edgeBlur: 1,
           drawContour: false,
         };
-
-        const canvas = camera?.canvas || outputCanvas.value!;
-        canvas.width = camera!.video.width;
-        canvas.height = camera!.video.height;
         //背景替换
         if (visualizationMode.value === 'virtualBackground' && bgLoaded) {
           await drawVirtualBackground(
@@ -400,15 +527,8 @@ const useCamera = () => {
             options.edgeBlur,
             options.flipHorizontal
           );
-        } else {
-          const ctx = canvas.getContext('2d')!;
-          ctx.save();
-          flipCanvasHorizontal(ctx.canvas);
-          // 输出原始图像
-          camera!.drawFromVideo(ctx);
-          ctx.restore();
         }
-        // camera?.drawToCanvas(canvas);
+        camera?.drawToCanvas(canvas);
       }
     }
   }
@@ -450,6 +570,7 @@ const useCamera = () => {
     cancelAnimationFrame(rafId);
     await renderBodypixSegmentationPrediction(true);
     const img = outputCanvas.value?.toDataURL();
+    // gestureRecgnizeWorker.postMessage({ data: 'test' });
     setTimeout(() => {
       camera!.start();
       runRAF();

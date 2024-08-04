@@ -51,7 +51,7 @@ export class Camera {
   ctx?: CanvasRenderingContext2D | null;
   // videoDevices?: MediaDeviceInfo[];
   deviceId?: string;
-  private stream?: MediaStream;
+  stream?: MediaStream;
   constructor(video: HTMLVideoElement, targetCanvas?: HTMLCanvasElement) {
     this.video = video;
     this.canvas = targetCanvas;
@@ -113,17 +113,17 @@ export class Camera {
       camera.canvas.height = videoHeight;
     }
     // Because the image from camera is mirrored, need to flip horizontally.
-    // camera.ctx?.translate(camera.video.videoWidth, 0);
-    // camera.ctx?.scale(-1, 1);
+    camera.ctx?.translate(camera.video.videoWidth, 0);
+    camera.ctx?.scale(-1, 1);
 
     return camera;
   }
 
-  drawToCanvas(canvas: HTMLCanvasElement) {
+  drawToCanvas(canvas: HTMLCanvasElement | OffscreenCanvas) {
     this.ctx?.drawImage(canvas, 0, 0, this.video.videoWidth, this.video.videoHeight);
   }
 
-  drawFromVideo(ctx: CanvasRenderingContext2D) {
+  drawFromVideo(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D) {
     ctx.drawImage(this.video, 0, 0, this.video.videoWidth, this.video.videoHeight);
   }
 
