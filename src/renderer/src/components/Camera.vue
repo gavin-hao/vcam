@@ -35,8 +35,9 @@ import shutterMp3 from '../assets/camera-shutter.mp3?asset';
 import useCamera from './useCamera';
 import useAutoHide from './useAutoHide';
 const viewport = ref<HTMLDivElement>();
-const { outputCanvas, gestureCanvas, videoElement, cameras, switchCamera, setVisualizationMode, takePhoto, videoSize } =
-  useCamera();
+const { outputCanvas, videoElement, cameras, switchCamera, setVisualizationMode, takePhoto, videoSize } = useCamera({
+  gestureRecognizerCallback,
+});
 const { container: controlRef } = useAutoHide();
 const { width, height } = useElementBounding(viewport);
 const bgImgs = ref<{ default: string[]; user: string[] }>();
@@ -90,7 +91,15 @@ const handlePhotoClick = async () => {
 const handleOpenBackgroundDialog = () => {
   dialogBackgroundVisible.value = true;
 };
-
+function gestureRecognizerCallback(gesture) {
+  if (gesture === 'SlideLeft') {
+    Mousetrap.trigger('down');
+  } else if (gesture === 'SlideRight') {
+    Mousetrap.trigger('up');
+  } else if (gesture === 'Thumb_Up' || gesture === 'Open_Palm' || gesture === 'Victory') {
+    Mousetrap.trigger('space');
+  }
+}
 const onKeyboardShortcuts = (combo: string) => {
   switch (combo) {
     case 'up':
