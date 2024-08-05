@@ -13,18 +13,9 @@ import {
 } from './segmenter';
 import * as bodySegmentation from '@tensorflow-models/body-segmentation';
 import { Segmentation } from '@tensorflow-models/body-segmentation/dist/shared/calculators/interfaces/common_interfaces';
-import {
-  type GestureRecognizerResult,
-  DrawingUtils,
-  GestureRecognizer,
-  FilesetResolver,
-} from '@mediapipe/tasks-vision';
 import { Gesture } from './gesture';
 import gestureModelAssetPath from '../../../../resources/gesture-models/gesture_recognizer.task?url';
-import { throttle } from 'lodash';
 
-// import GestureWorker from '../workers/gesture?worker&inline';
-// import GestureWorkerUrl from '../workers/gesture?url';
 /**
  * 支持的特效 虚拟背景｜背景虚化｜原始视频
  */
@@ -88,20 +79,7 @@ const useCamera = (options: { gestureRecognizerCallback: null | ((gesture: strin
     deviceId: undefined,
   };
   const gestureRecognizerCallback: null | ((gesture: string) => void) = options.gestureRecognizerCallback;
-  // 使用单独worker线程处理手势识别
-  // gestureRecognizerWorker.onmessage = async (e) => {
-  //   const { action, data } = e.data || {};
-  //   switch (action) {
-  //     case 'initilized':
-  //       console.log('Message received from worker', e);
 
-  //       break;
-  //     case 'predictResult':
-  //       await onGesturePredictCallback(data);
-  //       console.log('predictResult:', data);
-  //       break;
-  //   }
-  // };
   //用于存储摄像头原始图像
   const canvas: OffscreenCanvas = new OffscreenCanvas(0, 0); //document.createElement('canvas') as HTMLCanvasElement;
   let isCameraChanged = false;
@@ -119,36 +97,6 @@ const useCamera = (options: { gestureRecognizerCallback: null | ((gesture: strin
     isCameraChanged = true;
   };
 
-  // 这里处理手势识别结果 控制界面操作
-  // async function onGesturePredictCallback(predictResult: GestureRecognizerResult) {
-  //   const canvasCtx = gestureCanvas.getContext('2d')!;
-  //   canvasCtx.save();
-  //   canvasCtx.clearRect(0, 0, gestureCanvas.width, gestureCanvas.height);
-  //   const drawingUtils = new DrawingUtils(canvasCtx);
-
-  //   flipCanvasHorizontal(gestureCanvas);
-  //   if (predictResult.landmarks) {
-  //     for (const landmarks of predictResult.landmarks) {
-  //       drawingUtils.drawConnectors(landmarks, GestureRecognizer.HAND_CONNECTIONS, {
-  //         color: '#00FF00',
-  //         lineWidth: 5,
-  //       });
-  //       drawingUtils.drawLandmarks(landmarks, {
-  //         color: '#FF0000',
-  //         lineWidth: 2,
-  //       });
-  //     }
-  //   }
-  //   canvasCtx.restore();
-  //   if (predictResult.gestures.length > 0) {
-  //     // gestureOutput.style.display = "block";
-  //     // gestureOutput.style.width = videoWidth;
-  //     const categoryName = predictResult.gestures[0][0].categoryName;
-  //     const categoryScore = parseFloat((predictResult.gestures[0][0].score * 100).toString()).toFixed(2);
-  //     const handedness = predictResult.handednesses[0][0].displayName;
-  //     console.log(`GestureRecognizer: ${categoryName}\n Confidence: ${categoryScore} %\n Handedness: ${handedness}`);
-  //   }
-  // }
   onMounted(async () => {
     cameras.value = await getVideoInputs();
     if (isDev) {
@@ -172,7 +120,12 @@ const useCamera = (options: { gestureRecognizerCallback: null | ((gesture: strin
     // imageSegmenter = await createImageSegmenter();
     // worker线程初始化 手势识别模型
     const mediapipeWasm = await window.api.getMediapipeWasmPath();
-    gestureRecognizer = new Gesture({ mediapipeVisionWasmPath: mediapipeWasm, modelAssetPath: gestureModelAssetPath });
+    gestureRecognizer = new Gesture({
+      mediapipeVisionWasmPath: mediapipeWasm,
+      modelAssetPath: gestureModelAssetPath,
+      renderContainer: outputCanvas.value?.parentElement!,
+      showHandsKeypoints: true,
+    });
     await gestureRecognizer.load();
 
     runRAF();
@@ -228,18 +181,14 @@ const useCamera = (options: { gestureRecognizerCallback: null | ((gesture: strin
     return canvas;
   }
 
-  const predictGesture = throttle(async (videoFrame: ImageSource, _prevTime: number = performance.now()) => {
+  async function predictGesture(videoFrame: ImageSource, _prevTime: number = performance.now()) {
     if (gestureRecognizerCallback) {
       await gestureRecognizer.recognizeForVideo(videoFrame, gestureRecognizerCallback, _prevTime);
     }
-  }, 100);
-
-  // async function predictGesture(videoFrame: ImageSource, _prevTime: number = performance.now()) {
-  //   if (gestureRecognizerCallback) {
-  //     await gestureRecognizer.recognizeForVideo(videoFrame, gestureRecognizerCallback, _prevTime);
-  //   }
-  // }
-
+  }
+  async function setGestureSignal(state: boolean) {
+    gestureRecognizer.signal(state);
+  }
   const modelType: 'humanseg' | 'blazepose' | 'mpSelfiSeg' | 'bodypix' = 'mpSelfiSeg';
   async function renderSegmentPrediction() {
     if (modelType === 'humanseg') {
@@ -484,7 +433,6 @@ const useCamera = (options: { gestureRecognizerCallback: null | ((gesture: strin
     cancelAnimationFrame(rafId);
     await renderBodypixSegmentationPrediction(true);
     const img = outputCanvas.value?.toDataURL();
-    // gestureRecgnizeWorker.postMessage({ data: 'test' });
     setTimeout(() => {
       camera!.start();
       runRAF();
@@ -508,6 +456,7 @@ const useCamera = (options: { gestureRecognizerCallback: null | ((gesture: strin
     setVisualizationMode,
     cameras,
     videoSize,
+    setGestureSignal,
   };
 };
 export default useCamera;

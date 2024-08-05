@@ -6,6 +6,9 @@
       <!-- <canvas id="hands" ref="gestureCanvas"></canvas> -->
       <img v-show="!!currentBackground" id="background" :src="currentBackground" alt="" />
       <audio v-show="false" ref="audioShutter" :src="shutterMp3" :loop="false" :volume="0.7"></audio>
+      <div id="countdown" class="countdown" v-show="countdown >= 0">
+        <span>{{ countdown }}</span>
+      </div>
     </div>
     <div ref="controlRef" class="footer">
       <Control
@@ -29,13 +32,23 @@
 import BackgroundDialog from './BackgroundDialog.vue';
 import Control from './Contols.vue';
 import * as Mousetrap from 'mousetrap';
-import { computed, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue';
-import { useElementBounding } from '@vueuse/core';
+import { computed, onMounted, onUnmounted, ref, watchEffect } from 'vue';
+import { useElementBounding, useIntervalFn } from '@vueuse/core';
 import shutterMp3 from '../assets/camera-shutter.mp3?asset';
 import useCamera from './useCamera';
 import useAutoHide from './useAutoHide';
+import { getCanvasSize } from './renderUtils';
 const viewport = ref<HTMLDivElement>();
-const { outputCanvas, videoElement, cameras, switchCamera, setVisualizationMode, takePhoto, videoSize } = useCamera({
+const {
+  outputCanvas,
+  videoElement,
+  cameras,
+  switchCamera,
+  setVisualizationMode,
+  takePhoto,
+  setGestureSignal,
+  videoSize,
+} = useCamera({
   gestureRecognizerCallback,
 });
 const { container: controlRef } = useAutoHide();
@@ -44,6 +57,7 @@ const bgImgs = ref<{ default: string[]; user: string[] }>();
 const dialogBackgroundVisible = ref<boolean>(false);
 const audioShutter = ref<HTMLAudioElement>();
 const lastPhoto = ref<string>();
+const countdown = ref<number>(-1);
 const allBgImgs = computed(() => {
   return bgImgs.value?.default.concat(bgImgs.value.user) || [];
 });
@@ -56,24 +70,25 @@ watchEffect(() => {
     return;
   }
   outputCanvas.value!.style.transformOrigin = 'left top';
-  // always 16/9 保持宽高比不变缩放
-  const aspect = videoSize.width / videoSize.height;
-  let scale, xOffset, yOffset;
-  if (width.value / height.value > aspect) {
-    // 如果放缩后屏幕【宽】，就用屏幕高度计算放缩
-    scale = height.value / videoSize.height;
-    xOffset = (width.value - videoSize.width * scale) / 2 / scale;
-    yOffset = (height.value - videoSize.height * scale) / 2 / scale;
-    // 设置新算出来的scale
-  } else {
-    // 如果放缩后屏幕【窄】，就用屏幕宽度计算放缩
-    // 设置新算出来的scale
-    scale = width.value / videoSize.width;
-    xOffset = (width.value - videoSize.width * scale) / 2 / scale;
-    yOffset = (height.value - videoSize.height * scale) / 2 / scale;
-  }
+  const { scale, xOffset, yOffset } = getCanvasSize(width.value, height.value, videoSize.width, videoSize.height);
+
   outputCanvas.value!.style.transform = `scale(${scale}) translate( ${xOffset}px, ${yOffset}px )`;
 });
+const { pause, resume } = useIntervalFn(
+  () => {
+    countdown.value = countdown.value - 1;
+    if (countdown.value < 0) {
+      pause();
+      Mousetrap.trigger('space');
+    }
+  },
+  1000,
+  { immediate: false }
+);
+const startCountdown = () => {
+  countdown.value = 3;
+  resume();
+};
 onMounted(async () => {
   Mousetrap.bind(['up', 'down', 'pageup', 'pagedown', 'left', 'right', 'enter', 'tab', 'space'], function (_e, combo) {
     console.log(1111232131231);
@@ -88,92 +103,37 @@ const handlePhotoClick = async () => {
     lastPhoto.value = imageUrl;
     window.api.savePhoto(imageUrl);
   }
+  //恢复手势识别
+  setGestureSignal(true);
 };
 const handleOpenBackgroundDialog = () => {
   dialogBackgroundVisible.value = true;
 };
 
-const resultRef = ref({ x: [] as number[], y: [] as number[] });
-const dealCoordinates = (result) => {
-  const y = [] as number[];
-  const x = [] as number[];
-  if (!result) return;
-  result.forEach((item, index) => {
-    if (index >= 5 && index < 17) {
-      y.push(item.y < result[index + 4].y ? 1 : -1);
-    }
-    if (index >= 8 && index % 4 === 0) {
-      x.push(item.x > result[index - 3].x ? 1 : -1);
-    }
-  });
-  resultRef.value = { x: x, y: y };
-};
-
-function gestureRecognizerCallback(gesture, result) {
-  // if (gesture === 'SlideLeft') {
-  //   Mousetrap.trigger('down');
-  // } else if (gesture === 'SlideRight') {
-  //   Mousetrap.trigger('up');
-  // } else if (gesture === 'Thumb_Up' || gesture === 'Open_Palm' || gesture === 'Victory') {
-  //   Mousetrap.trigger('space');
-  // } else {
-  //   dealCoordinates(result.landmarks[0]);
-  // }
-  if (gesture === 'Victory') {
-    Mousetrap.trigger('space');
-  } else {
-    dealCoordinates(result.landmarks[0]);
+function gestureRecognizerCallback(gesture) {
+  if (gesture === 'SlideLeft') {
+    //暂停识别手势
+    setGestureSignal(false);
+    Mousetrap.trigger('down');
+    //等待500ms后再开始识别手势
+    setTimeout(() => {
+      setGestureSignal(true);
+    }, 500);
+  } else if (gesture === 'SlideRight') {
+    setGestureSignal(false);
+    Mousetrap.trigger('up');
+    setTimeout(() => {
+      setGestureSignal(true);
+    }, 500);
+  } else if (gesture === 'Thumb_Up' || gesture === 'Victory') {
+    //暂停识别手势，等待拍照玩完成
+    setGestureSignal(false);
+    startCountdown();
   }
 }
 
-const gesture = ref('');
-
-const getLocation = (value: { x: number[]; y: number[] }) => {
-  const yTop = value.y.filter((item) => item > 0).length >= 10;
-  const xTop = value.x.filter((item) => item > 0).length >= 3;
-  const xBottom = value.x.filter((item) => item < 0).length >= 3;
-  if (yTop && xTop) return 'left';
-  if (yTop && xBottom) return 'right';
-  return '';
-};
-
-const setGesture = (value: { x: number[]; y: number[] }) => {
-  const location = getLocation(value);
-  gesture.value = location;
-};
-
-watch(
-  () => resultRef.value,
-  (newVal) => {
-    console.log(gesture.value, 1112233);
-    if (gesture.value === '') {
-      setGesture(newVal);
-      return;
-    }
-    const newLocation = getLocation(newVal);
-    console.log(gesture.value, newLocation, 77777);
-    if (gesture.value !== newLocation && newLocation !== '') {
-      Mousetrap.trigger(newLocation);
-      gesture.value = '';
-    }
-    // console.log(gesture.value, 1111);
-    // const newLocation = getLocation(newVal);
-    // if (gesture.value.length < 2 || gesture.value[0] !== gesture.value[1]) {
-    //   setGesture(newVal);
-    //   return;
-    // }
-    // if (newLocation === gesture.value[0] || newLocation === '') {
-    //   return;
-    // }
-    // console.log(newLocation, 11111111);
-    // Mousetrap.trigger(newLocation);
-    // gesture.value = [];
-  },
-  { deep: true }
-);
-
 const onKeyboardShortcuts = (combo: string) => {
-  console.log(combo, 'combo');
+  // console.log(combo, 'combo');
   switch (combo) {
     case 'up':
     case 'left':
@@ -201,7 +161,6 @@ const switchBackground = (forword: boolean) => {
   const cur = currentBackground.value || 'none';
   const currentIndex = array.findIndex((i) => i == cur);
   let next = currentIndex;
-  console.log(forword, 'xxxxxxx');
   if (forword) {
     next = (next - 1) % array.length;
   } else {
@@ -213,7 +172,6 @@ const switchBackground = (forword: boolean) => {
   handleBackgroundChanged(array[next]);
 };
 const handleBackgroundChanged = (img?: string) => {
-  console.error(img, 111122223333);
   currentBackground.value = img;
 };
 const handleOpenAlbum = () => {
@@ -271,15 +229,28 @@ onUnmounted(() => {
       visibility: hidden;
     }
     #view {
-      position: relative;
+      position: absolute;
       z-index: 1;
     }
-    // #hands {
-    //   position: absolute;
-    //   top: 0;
-    //   left: 0;
-    //   z-index: 2;
-    // }
+    #countdown {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 150px;
+      height: 150px;
+      line-height: 100px;
+      font-size: 100px;
+      font-weight: 500;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      color: #ffffff;
+      border: 5px solid rgba(252, 0, 0, 0.8);
+      // color: #00ff00b3;
+    }
     #background {
       position: absolute;
       top: 0;

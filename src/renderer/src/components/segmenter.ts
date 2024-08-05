@@ -16,7 +16,7 @@ tfjsWasm.setWasmPaths({
   'tfjs-backend-wasm-threaded-simd.wasm': wasmSimdThreadedPath,
 });
 
-export * from './segmentationRenderUtils';
+export * from './renderUtils';
 
 export async function createSegmenter(
   models: Array<{ key: string; path: string }>

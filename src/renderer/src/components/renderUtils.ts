@@ -306,3 +306,35 @@ export async function drawVirtualBackground(
   await drawWithCompositing(ctx, blurredImage, 'destination-over');
   ctx.restore();
 }
+/**
+ * 根据父元素大小 等比例缩放画布 并保持画居中
+ * @param containerWidth
+ * @param containerHeight
+ * @param imageWidth
+ * @param imageHeight
+ * @returns
+ */
+export const getCanvasSize = (
+  containerWidth: number,
+  containerHeight: number,
+  imageWidth: number,
+  imageHeight: number
+) => {
+  // always 16/9 保持宽高比不变缩放
+  const aspect = imageWidth / imageHeight;
+  let scale, xOffset, yOffset;
+  if (containerWidth / containerHeight > aspect) {
+    // 如果放缩后屏幕【宽】，就用屏幕高度计算放缩
+    scale = containerHeight / imageHeight;
+    xOffset = (containerWidth - imageWidth * scale) / 2 / scale;
+    yOffset = (containerHeight - imageHeight * scale) / 2 / scale;
+    // 设置新算出来的scale
+  } else {
+    // 如果放缩后屏幕【窄】，就用屏幕宽度计算放缩
+    // 设置新算出来的scale
+    scale = containerWidth / imageWidth;
+    xOffset = (containerWidth - imageWidth * scale) / 2 / scale;
+    yOffset = (containerHeight - imageHeight * scale) / 2 / scale;
+  }
+  return { scale, xOffset, yOffset };
+};
