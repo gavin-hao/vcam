@@ -21,6 +21,7 @@ import {
 } from '@mediapipe/tasks-vision';
 import { Gesture } from './gesture';
 import gestureModelAssetPath from '../../../../resources/gesture-models/gesture_recognizer.task?url';
+import { throttle } from 'lodash';
 
 // import GestureWorker from '../workers/gesture?worker&inline';
 // import GestureWorkerUrl from '../workers/gesture?url';
@@ -50,7 +51,7 @@ const resetTime = {
   lastPanelUpdate: 0,
 };
 type StatsTime = typeof resetTime;
-let modelTime = { ...resetTime };
+const modelTime = { ...resetTime };
 function beginEstimateSegmentationStats(time: StatsTime) {
   time.startInferenceTime = (performance || Date).now();
 }
@@ -78,15 +79,15 @@ const useCamera = (options: { gestureRecognizerCallback: null | ((gesture: strin
   const videoSize = VIDEO_SIZE['720p'];
   const bgCanvas = document.createElement('canvas');
   let bgLoaded = false;
-  let visualizationMode = ref<SupportedVisualization>('none');
-  let cameraOption: CameraOption = {
+  const visualizationMode = ref<SupportedVisualization>('none');
+  const cameraOption: CameraOption = {
     width: videoSize.width,
     height: videoSize.height,
     targetFPS: 30,
     canvas: outputCanvas.value,
     deviceId: undefined,
   };
-  let gestureRecognizerCallback: null | ((gesture: string) => void) = options.gestureRecognizerCallback;
+  const gestureRecognizerCallback: null | ((gesture: string) => void) = options.gestureRecognizerCallback;
   // 使用单独worker线程处理手势识别
   // gestureRecognizerWorker.onmessage = async (e) => {
   //   const { action, data } = e.data || {};
@@ -102,7 +103,7 @@ const useCamera = (options: { gestureRecognizerCallback: null | ((gesture: strin
   //   }
   // };
   //用于存储摄像头原始图像
-  let canvas: OffscreenCanvas = new OffscreenCanvas(0, 0); //document.createElement('canvas') as HTMLCanvasElement;
+  const canvas: OffscreenCanvas = new OffscreenCanvas(0, 0); //document.createElement('canvas') as HTMLCanvasElement;
   let isCameraChanged = false;
   const cameras = ref<MediaDeviceInfo[]>([]);
 
@@ -227,13 +228,19 @@ const useCamera = (options: { gestureRecognizerCallback: null | ((gesture: strin
     return canvas;
   }
 
-  async function predictGesture(videoFrame: ImageSource, _prevTime: number = performance.now()) {
+  const predictGesture = throttle(async (videoFrame: ImageSource, _prevTime: number = performance.now()) => {
     if (gestureRecognizerCallback) {
       await gestureRecognizer.recognizeForVideo(videoFrame, gestureRecognizerCallback, _prevTime);
     }
-  }
+  }, 100);
 
-  let modelType: 'humanseg' | 'blazepose' | 'mpSelfiSeg' | 'bodypix' = 'mpSelfiSeg';
+  // async function predictGesture(videoFrame: ImageSource, _prevTime: number = performance.now()) {
+  //   if (gestureRecognizerCallback) {
+  //     await gestureRecognizer.recognizeForVideo(videoFrame, gestureRecognizerCallback, _prevTime);
+  //   }
+  // }
+
+  const modelType: 'humanseg' | 'blazepose' | 'mpSelfiSeg' | 'bodypix' = 'mpSelfiSeg';
   async function renderSegmentPrediction() {
     if (modelType === 'humanseg') {
       // 当前人像分割模型使用的是ppseg
@@ -468,6 +475,7 @@ const useCamera = (options: { gestureRecognizerCallback: null | ((gesture: strin
     }
   };
   const takePhoto = async () => {
+    console.log(88888888888);
     if (!camera) {
       return;
     }

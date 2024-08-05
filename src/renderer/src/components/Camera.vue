@@ -1,26 +1,26 @@
 <template>
   <div class="camera">
-    <div class="viewport" ref="viewport">
+    <div ref="viewport" class="viewport">
       <video id="video" ref="videoElement" playsinline></video>
       <canvas id="view" ref="outputCanvas"></canvas>
       <!-- <canvas id="hands" ref="gestureCanvas"></canvas> -->
-      <img id="background" v-show="!!currentBackground" :src="currentBackground" alt="" />
-      <audio :src="shutterMp3" :loop="false" :volume="0.7" v-show="false" ref="audioShutter"></audio>
+      <img v-show="!!currentBackground" id="background" :src="currentBackground" alt="" />
+      <audio v-show="false" ref="audioShutter" :src="shutterMp3" :loop="false" :volume="0.7"></audio>
     </div>
-    <div class="footer" ref="controlRef">
+    <div ref="controlRef" class="footer">
       <Control
         :photo="lastPhoto"
         :cameras="cameras"
-        @switchCamera="switchCamera"
+        @switch-camera="switchCamera"
         @shutter-click="handlePhotoClick"
-        @openBackgroundDialog="handleOpenBackgroundDialog"
-        @openAlbum="handleOpenAlbum"
+        @open-background-dialog="handleOpenBackgroundDialog"
+        @open-album="handleOpenAlbum"
       />
     </div>
     <BackgroundDialog
+      v-model="dialogBackgroundVisible"
       :images="allBgImgs"
       :selected="currentBackground"
-      v-model="dialogBackgroundVisible"
       @change="handleBackgroundChanged"
     />
   </div>
@@ -29,7 +29,7 @@
 import BackgroundDialog from './BackgroundDialog.vue';
 import Control from './Contols.vue';
 import * as Mousetrap from 'mousetrap';
-import { computed, onMounted, onUnmounted, ref, watchEffect } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue';
 import { useElementBounding } from '@vueuse/core';
 import shutterMp3 from '../assets/camera-shutter.mp3?asset';
 import useCamera from './useCamera';
@@ -76,6 +76,7 @@ watchEffect(() => {
 });
 onMounted(async () => {
   Mousetrap.bind(['up', 'down', 'pageup', 'pagedown', 'left', 'right', 'enter', 'tab', 'space'], function (_e, combo) {
+    console.log(1111232131231);
     onKeyboardShortcuts(combo);
   });
   await window.api.getBackgroundImages();
@@ -91,16 +92,88 @@ const handlePhotoClick = async () => {
 const handleOpenBackgroundDialog = () => {
   dialogBackgroundVisible.value = true;
 };
-function gestureRecognizerCallback(gesture) {
-  if (gesture === 'SlideLeft') {
-    Mousetrap.trigger('down');
-  } else if (gesture === 'SlideRight') {
-    Mousetrap.trigger('up');
-  } else if (gesture === 'Thumb_Up' || gesture === 'Open_Palm' || gesture === 'Victory') {
+
+const resultRef = ref({ x: [] as number[], y: [] as number[] });
+const dealCoordinates = (result) => {
+  const y = [] as number[];
+  const x = [] as number[];
+  if (!result) return;
+  result.forEach((item, index) => {
+    if (index >= 5 && index < 17) {
+      y.push(item.y < result[index + 4].y ? 1 : -1);
+    }
+    if (index >= 8 && index % 4 === 0) {
+      x.push(item.x > result[index - 3].x ? 1 : -1);
+    }
+  });
+  resultRef.value = { x: x, y: y };
+};
+
+function gestureRecognizerCallback(gesture, result) {
+  // if (gesture === 'SlideLeft') {
+  //   Mousetrap.trigger('down');
+  // } else if (gesture === 'SlideRight') {
+  //   Mousetrap.trigger('up');
+  // } else if (gesture === 'Thumb_Up' || gesture === 'Open_Palm' || gesture === 'Victory') {
+  //   Mousetrap.trigger('space');
+  // } else {
+  //   dealCoordinates(result.landmarks[0]);
+  // }
+  if (gesture === 'Victory') {
     Mousetrap.trigger('space');
+  } else {
+    dealCoordinates(result.landmarks[0]);
   }
 }
+
+const gesture = ref('');
+
+const getLocation = (value: { x: number[]; y: number[] }) => {
+  const yTop = value.y.filter((item) => item > 0).length >= 10;
+  const xTop = value.x.filter((item) => item > 0).length >= 3;
+  const xBottom = value.x.filter((item) => item < 0).length >= 3;
+  if (yTop && xTop) return 'left';
+  if (yTop && xBottom) return 'right';
+  return '';
+};
+
+const setGesture = (value: { x: number[]; y: number[] }) => {
+  const location = getLocation(value);
+  gesture.value = location;
+};
+
+watch(
+  () => resultRef.value,
+  (newVal) => {
+    console.log(gesture.value, 1112233);
+    if (gesture.value === '') {
+      setGesture(newVal);
+      return;
+    }
+    const newLocation = getLocation(newVal);
+    console.log(gesture.value, newLocation, 77777);
+    if (gesture.value !== newLocation && newLocation !== '') {
+      Mousetrap.trigger(newLocation);
+      gesture.value = '';
+    }
+    // console.log(gesture.value, 1111);
+    // const newLocation = getLocation(newVal);
+    // if (gesture.value.length < 2 || gesture.value[0] !== gesture.value[1]) {
+    //   setGesture(newVal);
+    //   return;
+    // }
+    // if (newLocation === gesture.value[0] || newLocation === '') {
+    //   return;
+    // }
+    // console.log(newLocation, 11111111);
+    // Mousetrap.trigger(newLocation);
+    // gesture.value = [];
+  },
+  { deep: true }
+);
+
 const onKeyboardShortcuts = (combo: string) => {
+  console.log(combo, 'combo');
   switch (combo) {
     case 'up':
     case 'left':
@@ -128,6 +201,7 @@ const switchBackground = (forword: boolean) => {
   const cur = currentBackground.value || 'none';
   const currentIndex = array.findIndex((i) => i == cur);
   let next = currentIndex;
+  console.log(forword, 'xxxxxxx');
   if (forword) {
     next = (next - 1) % array.length;
   } else {
@@ -139,6 +213,7 @@ const switchBackground = (forword: boolean) => {
   handleBackgroundChanged(array[next]);
 };
 const handleBackgroundChanged = (img?: string) => {
+  console.error(img, 111122223333);
   currentBackground.value = img;
 };
 const handleOpenAlbum = () => {
