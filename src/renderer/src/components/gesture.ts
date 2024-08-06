@@ -8,7 +8,60 @@ import {
 import { getCanvasSize, getInputSize } from './renderUtils';
 type ImageSource = HTMLVideoElement | HTMLCanvasElement | ImageBitmap | ImageData | OffscreenCanvas | VideoFrame;
 let elapsedTime = 0;
+class DirectiveProcess {
+  private directive: 'Victory' | 'SlideRght' | 'SlideLeft' | null = null;
+  private count = 0;
+  activatedTime: number = 0;
+  timer: ReturnType<typeof setTimeout> | null = null;
+  interval: number;
 
+  constructor(interval: number = 500) {
+    this.interval = interval;
+  }
+  tryActiveDirective(
+    directive: 'Victory' | 'SlideRght' | 'SlideLeft',
+    threshold: number = 3
+  ): 'pending' | 'success' | 'canceled' {
+    if (this.directive == null) {
+      this.directive = directive;
+      this.count++;
+      this.activatedTime = performance.now();
+      this.startTimer();
+      return 'pending';
+    } else {
+      if (this.directive === directive) {
+        this.count++;
+        if (this.count >= threshold) {
+          return 'success';
+        }
+        return 'pending';
+      } else {
+        return 'canceled';
+      }
+    }
+  }
+  private startTimer() {
+    this.clearTimer();
+    let cbFn = this.reset;
+    this.timer = setTimeout(() => {
+      cbFn();
+    }, this.interval);
+  }
+  private clearTimer() {
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+  }
+  reset() {
+    this.directive = null;
+    this.activatedTime = 0;
+    this.count = 0;
+  }
+  get currentDirective() {
+    return this.directive;
+  }
+}
 export class Gesture {
   wasmPath: string;
   modelAssetPath: string;
@@ -107,6 +160,8 @@ export class Gesture {
   private gestureActivitedTime: number = 0;
   // 是否有正在激活状态的手势识别
   private mutex = false;
+  // 当前正在处理中的指令
+  private currentProcess: DirectiveProcess = new DirectiveProcess();
   /**
    *
    * @param predictResult
@@ -134,37 +189,55 @@ export class Gesture {
       }
       this.canvasCtx?.restore();
     }
-    if (predictResult.handedness.length > 0) {
-      // console.log(`GestureRecognizer:`, predictResult);
-    }
+
     if (predictResult.gestures.length > 0) {
-      const categoryName = predictResult.gestures[0][0].categoryName;
-      if (!this.mutex && this.gestureActivitedTime === 0 && ['Thumb_Up', 'Victory'].includes(categoryName)) {
-        //第一次识别到 该手势
-        this.gestureActivitedTime = performance.now();
-        this.tempGestures.push(categoryName);
-        this.mutex = true;
-      } else {
-        //监听的持续时间内 满足 一定的条件
-        if (performance.now() - this.gestureActivitedTime < 500) {
-          if (['Thumb_Up', 'Victory'].includes(categoryName)) {
-            this.tempGestures.push(categoryName);
+      for (const i in predictResult.gestures) {
+        const categoryName = predictResult.gestures[i][0].categoryName;
+        const score = predictResult.gestures[i][0].score;
+        const isRightHand = predictResult.handedness[i][0].categoryName === 'Right';
+        //只识别右手
+        // if (!isRightHand) {
+        //   continue;
+        // }
+        //'Thumb_Up', 'Victory' 连续3次识别成功 score>0.4 激活拍照
+        if (categoryName === 'Victory' || (categoryName === 'Thumb_Up' && score > 0.4)) {
+          const directiveResult = this.currentProcess.tryActiveDirective('Victory', 3);
+          if (directiveResult === 'success') {
+            return 'Victory';
+          } else if (directiveResult === 'canceled') {
+            continue;
           }
-          if (this.tempGestures.length > 4) {
-            //本次识别成功
-            let res = this.tempGestures[0];
-            this.tempGestures = [];
-            this.gestureActivitedTime = 0;
-            this.mutex = false;
-            return res;
-          }
-        } else {
-          // 取消本次识别 ，恢复监听状态
-          this.tempGestures = [];
-          this.gestureActivitedTime = 0;
-          this.mutex = false;
         }
       }
+      // Victory 激活拍照指令
+
+      // if (!this.mutex && this.gestureActivitedTime === 0 && ['Thumb_Up', 'Victory'].includes(categoryName)) {
+      //   //第一次识别到 该手势
+      //   this.gestureActivitedTime = performance.now();
+      //   this.tempGestures.push(categoryName);
+      //   this.mutex = true;
+      // } else {
+      //   //监听的持续时间内 满足 一定的条件
+      //   if (performance.now() - this.gestureActivitedTime < 500) {
+      //     if (['Thumb_Up', 'Victory'].includes(categoryName)) {
+      //       this.tempGestures.push(categoryName);
+      //     }
+      //     if (this.tempGestures.length > 4) {
+      //       //本次识别成功
+      //       let res = this.tempGestures[0];
+      //       this.tempGestures = [];
+      //       this.gestureActivitedTime = 0;
+      //       this.mutex = false;
+      //       return res;
+      //     }
+      //   } else {
+      //     // 取消本次识别 ，恢复监听状态
+      //     this.tempGestures = [];
+      //     this.gestureActivitedTime = 0;
+      //     this.mutex = false;
+      //   }
+      // }
+      const categoryName = predictResult.gestures[0][0].categoryName;
       const categoryScore = parseFloat((predictResult.gestures[0][0].score * 100).toString()).toFixed(2);
       const handedness = predictResult.handedness[0][0].displayName;
       console.log(`GestureRecognizer: ${categoryName}\n Confidence: ${categoryScore} %\n Handedness: ${handedness}`);
