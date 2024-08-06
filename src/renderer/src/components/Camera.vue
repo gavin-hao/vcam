@@ -150,22 +150,26 @@ const setGesture = (value: { x: number[]; y: number[]; handedness: string }) => 
   }
 };
 
+let timeoutId;
+watch(
+  () => gesture.value,
+  (newValue, oldValue) => {
+    if (gesture.value.length === 0) return;
+    if (JSON.stringify(newValue) !== JSON.stringify(oldValue)) {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      timeoutId = setTimeout(() => {
+        gesture.value = [];
+      }, 5000);
+    }
+  },
+  { deep: true }
+);
+
 watch(
   () => resultRef.value,
   (newVal) => {
-    // console.log(gesture.value, 1112233);
-    // if (gesture.value === '') {
-    //   setGesture(newVal);
-    //   return;
-    // }
-    // const newLocation = getLocation(newVal);
-    // console.log(gesture.value, newLocation, 77777);
-    // if (gesture.value !== newLocation && newLocation !== '') {
-    //   Mousetrap.trigger(newLocation);
-    //   gesture.value = '';
-    // }
-    // =========
-    console.log(gesture.value, 1111);
     const newLocation = getLocation(newVal);
     if (newLocation.location === '') {
       return;
