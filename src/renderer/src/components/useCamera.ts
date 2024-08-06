@@ -418,13 +418,11 @@ const useCamera = (options: { gestureRecognizerCallback: null | ((gesture: strin
   };
   const setVisualizationMode = (vis: SupportedVisualization, imageUrl?: string) => {
     visualizationMode.value = vis;
-    // console.log('setVisualizationMode', vis, imageUrl);
     if (vis === 'virtualBackground') {
       updateBackground(imageUrl);
     }
   };
   const takePhoto = async () => {
-    console.log(88888888888);
     if (!camera) {
       return;
     }

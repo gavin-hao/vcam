@@ -91,7 +91,6 @@ const startCountdown = () => {
 };
 onMounted(async () => {
   Mousetrap.bind(['up', 'down', 'pageup', 'pagedown', 'left', 'right', 'enter', 'tab', 'space'], function (_e, combo) {
-    console.log(1111232131231);
     onKeyboardShortcuts(combo);
   });
   await window.api.getBackgroundImages();
@@ -133,7 +132,6 @@ function gestureRecognizerCallback(gesture) {
 }
 
 const onKeyboardShortcuts = (combo: string) => {
-  // console.log(combo, 'combo');
   switch (combo) {
     case 'up':
     case 'left':
