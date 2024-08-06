@@ -93,20 +93,20 @@ const handleOpenBackgroundDialog = () => {
   dialogBackgroundVisible.value = true;
 };
 
-const resultRef = ref({ x: [] as number[], y: [] as number[] });
-const dealCoordinates = (result) => {
+const resultRef = ref({ x: [] as number[], y: [] as number[], handedness: '' as string });
+const dealCoordinates = (landmarks, handedness) => {
   const y = [] as number[];
   const x = [] as number[];
-  if (!result) return;
-  result.forEach((item, index) => {
+  if (!landmarks) return;
+  landmarks.forEach((item, index) => {
     if (index >= 5 && index < 17) {
-      y.push(item.y < result[index + 4].y ? 1 : -1);
+      y.push(item.y < landmarks[index + 4].y ? 1 : -1);
     }
     if (index >= 8 && index % 4 === 0) {
-      x.push(item.x > result[index - 3].x ? 1 : -1);
+      x.push(item.x > landmarks[index - 3].x ? 1 : -1);
     }
   });
-  resultRef.value = { x: x, y: y };
+  resultRef.value = { x: x, y: y, handedness: handedness[0].categoryName };
 };
 
 function gestureRecognizerCallback(gesture, result) {
@@ -119,61 +119,78 @@ function gestureRecognizerCallback(gesture, result) {
   // } else {
   //   dealCoordinates(result.landmarks[0]);
   // }
+  console.log(result, 'result');
   if (gesture === 'Victory') {
     Mousetrap.trigger('space');
   } else {
-    dealCoordinates(result.landmarks[0]);
+    dealCoordinates(result.landmarks[0], result.handedness[0]);
   }
 }
 
-const gesture = ref('');
+const gesture = ref([] as { location: string; handedness: string }[]);
 
-const getLocation = (value: { x: number[]; y: number[] }) => {
+const getLocation = (value: { x: number[]; y: number[]; handedness: string }) => {
   const yTop = value.y.filter((item) => item > 0).length >= 10;
   const xTop = value.x.filter((item) => item > 0).length >= 3;
   const xBottom = value.x.filter((item) => item < 0).length >= 3;
-  if (yTop && xTop) return 'left';
-  if (yTop && xBottom) return 'right';
-  return '';
+  if (yTop && xTop) return { location: 'left', handedness: value.handedness };
+  if (yTop && xBottom) return { location: 'right', handedness: value.handedness };
+  return { location: '', handedness: value.handedness };
 };
 
-const setGesture = (value: { x: number[]; y: number[] }) => {
+const setGesture = (value: { x: number[]; y: number[]; handedness: string }) => {
   const location = getLocation(value);
-  gesture.value = location;
+  if (location.location === '' || location.handedness === '') {
+    console.log(123);
+  } else {
+    gesture.value.push(location);
+    if (gesture.value.length > 2) {
+      gesture.value = gesture.value.slice(-2);
+    }
+  }
 };
 
 watch(
   () => resultRef.value,
   (newVal) => {
-    console.log(gesture.value, 1112233);
-    if (gesture.value === '') {
-      setGesture(newVal);
-      return;
-    }
-    const newLocation = getLocation(newVal);
-    console.log(gesture.value, newLocation, 77777);
-    if (gesture.value !== newLocation && newLocation !== '') {
-      Mousetrap.trigger(newLocation);
-      gesture.value = '';
-    }
-    // console.log(gesture.value, 1111);
-    // const newLocation = getLocation(newVal);
-    // if (gesture.value.length < 2 || gesture.value[0] !== gesture.value[1]) {
+    // console.log(gesture.value, 1112233);
+    // if (gesture.value === '') {
     //   setGesture(newVal);
     //   return;
     // }
-    // if (newLocation === gesture.value[0] || newLocation === '') {
-    //   return;
+    // const newLocation = getLocation(newVal);
+    // console.log(gesture.value, newLocation, 77777);
+    // if (gesture.value !== newLocation && newLocation !== '') {
+    //   Mousetrap.trigger(newLocation);
+    //   gesture.value = '';
     // }
-    // console.log(newLocation, 11111111);
-    // Mousetrap.trigger(newLocation);
-    // gesture.value = [];
+    // =========
+    console.log(gesture.value, 1111);
+    const newLocation = getLocation(newVal);
+    if (newLocation.location === '') {
+      return;
+    }
+    if (
+      gesture.value.length < 2 ||
+      gesture.value[0].location !== gesture.value[1].location ||
+      gesture.value[0].handedness !== gesture.value[1].handedness
+    ) {
+      setGesture(newVal);
+      return;
+    }
+    if (newLocation.location === gesture.value[0].location) {
+      return;
+    }
+    if (newLocation.handedness !== newLocation.location) {
+      Mousetrap.trigger(newLocation.location);
+      gesture.value = [];
+    }
   },
   { deep: true }
 );
 
 const onKeyboardShortcuts = (combo: string) => {
-  console.log(combo, 'combo');
+  console.error(combo, 'combo');
   switch (combo) {
     case 'up':
     case 'left':

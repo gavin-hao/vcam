@@ -71,7 +71,7 @@ function endEstimateSegmentationStats(time: StatsTime) {
   }
 }
 
-const useCamera = (options: { gestureRecognizerCallback: null | ((gesture: string) => void) }) => {
+const useCamera = (options: { gestureRecognizerCallback: null | ((gesture: string, result: any) => void) }) => {
   const outputCanvas = ref<HTMLCanvasElement>();
   // let gestureCanvas: HTMLCanvasElement;
 
@@ -87,7 +87,7 @@ const useCamera = (options: { gestureRecognizerCallback: null | ((gesture: strin
     canvas: outputCanvas.value,
     deviceId: undefined,
   };
-  const gestureRecognizerCallback: null | ((gesture: string) => void) = options.gestureRecognizerCallback;
+  const gestureRecognizerCallback: null | ((gesture: string, result: any) => void) = options.gestureRecognizerCallback;
   // 使用单独worker线程处理手势识别
   // gestureRecognizerWorker.onmessage = async (e) => {
   //   const { action, data } = e.data || {};
@@ -228,17 +228,17 @@ const useCamera = (options: { gestureRecognizerCallback: null | ((gesture: strin
     return canvas;
   }
 
-  const predictGesture = throttle(async (videoFrame: ImageSource, _prevTime: number = performance.now()) => {
-    if (gestureRecognizerCallback) {
-      await gestureRecognizer.recognizeForVideo(videoFrame, gestureRecognizerCallback, _prevTime);
-    }
-  }, 100);
-
-  // async function predictGesture(videoFrame: ImageSource, _prevTime: number = performance.now()) {
+  // const predictGesture = throttle(async (videoFrame: ImageSource, _prevTime: number = performance.now()) => {
   //   if (gestureRecognizerCallback) {
   //     await gestureRecognizer.recognizeForVideo(videoFrame, gestureRecognizerCallback, _prevTime);
   //   }
-  // }
+  // }, 100);
+
+  async function predictGesture(videoFrame: ImageSource, _prevTime: number = performance.now()) {
+    if (gestureRecognizerCallback) {
+      await gestureRecognizer.recognizeForVideo(videoFrame, gestureRecognizerCallback, _prevTime);
+    }
+  }
 
   const modelType: 'humanseg' | 'blazepose' | 'mpSelfiSeg' | 'bodypix' = 'mpSelfiSeg';
   async function renderSegmentPrediction() {
