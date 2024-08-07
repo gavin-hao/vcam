@@ -1,5 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron';
-import fs from 'fs-extra';
+import { app } from 'electron';
 import path from 'path';
 
 let cwd = process.cwd();

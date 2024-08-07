@@ -1,7 +1,7 @@
 /**
  * @file humanseg model
  */
-
+// @ts-nocheck
 import { Runner, env } from '@paddlejs/paddlejs-core';
 import '@paddlejs/paddlejs-backend-webgl';
 import WebGLImageFilter from './thirdParty/webgl-image-filter';

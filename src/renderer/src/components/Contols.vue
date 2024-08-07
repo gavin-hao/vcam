@@ -37,7 +37,7 @@
 </template>
 <script setup lang="ts">
 import { ref } from 'vue';
-import { VideoCamera, Picture, Setting, Files } from '@element-plus/icons-vue';
+import { VideoCamera, Setting, Files } from '@element-plus/icons-vue';
 import { ElIcon, ElDropdown, ElDropdownMenu, ElDropdownItem } from 'element-plus';
 
 const buttonRef = ref();

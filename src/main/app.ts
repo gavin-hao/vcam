@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron';
+import { shell, BrowserWindow, ipcMain, dialog } from 'electron';
 import fs from 'fs-extra';
 import path from 'path';
 import crypto from 'crypto';

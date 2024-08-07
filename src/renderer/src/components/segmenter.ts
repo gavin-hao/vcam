@@ -35,7 +35,7 @@ export async function createBlazePoseSegmenter(
   const customSolutionPath = models.find((v) => v.key == 'mediapipe_pose')?.path;
   return poseDetection.createDetector(poseDetection.SupportedModels.BlazePose, {
     runtime: 'mediapipe',
-    modelType: 'heavy',
+    modelType: 'lite',
     solutionPath: customSolutionPath, //`https://cdn.jsdelivr.net/npm/@mediapipe/pose@${mpPose.VERSION}`,
     enableSegmentation: true,
     smoothSegmentation: true,
@@ -53,7 +53,7 @@ export async function createBodyPixSegmenter(models: Array<{ key: string; path: 
   } = {
     architecture: 'MobileNetV1', //'MobileNetV1', //ResNet50
     outputStride: 16,
-    quantBytes: 2,
+    quantBytes: 4,
     multiplier: 0.75,
   };
   let modelPath = `${customSolutionPath}/${options.architecture}/quant${options.quantBytes}-stride${options.outputStride}/model.json`;

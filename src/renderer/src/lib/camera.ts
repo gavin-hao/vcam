@@ -19,20 +19,7 @@ export interface CameraOption {
   videoDevices?: MediaDeviceInfo[];
   // enableOnInactiveState?: boolean;
 }
-// export const STATE = {
-//   camera: { targetFPS: 60, sizeOption: '1280 X 720', cameraSelector: '' },
-//   fpsDisplay: { mode: 'model' },
-// };
-async function getDeviceIdForLabel(cameras: MediaDeviceInfo[], cameraLabel: string) {
-  for (let i = 0; i < cameras.length; i++) {
-    const camera = cameras[i];
-    if (camera.label === cameraLabel) {
-      return camera.deviceId;
-    }
-  }
 
-  return undefined;
-}
 export async function getVideoInputs() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
     console.log('enumerateDevices() not supported.');

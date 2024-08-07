@@ -111,7 +111,7 @@ const useCamera = (options: { gestureRecognizerCallback: null | ((gesture: strin
     cameraOption.canvas = outputCanvas.value;
     camera = await Camera.setupCamera(videoElement.value!, cameraOption);
     await tf.setBackend('webgl');
-    // await tf.ready();
+    await tf.ready();
 
     segmenter = await createSegmenter(models);
     // humansegSegmenter = await createHumanSegSegmentor(models, camera.video.width, camera.video.height);
@@ -123,7 +123,7 @@ const useCamera = (options: { gestureRecognizerCallback: null | ((gesture: strin
     gestureRecognizer = new Gesture({
       mediapipeVisionWasmPath: mediapipeWasm,
       modelAssetPath: gestureModelAssetPath,
-      renderContainer: outputCanvas.value?.parentElement!,
+      renderContainer: outputCanvas.value!.parentElement!,
       showHandsKeypoints: true,
     });
     await gestureRecognizer.load();
@@ -151,8 +151,7 @@ const useCamera = (options: { gestureRecognizerCallback: null | ((gesture: strin
     await checkOptionUpdate();
     //统计模型性能
     beginEstimateSegmentationStats(modelTime);
-    await drawVideo(canvas, camera?.video!, false);
-
+    await drawVideo(canvas, camera!.video!, false);
     await predictGesture(canvas, _prevTime);
 
     await renderSegmentPrediction();
@@ -166,11 +165,12 @@ const useCamera = (options: { gestureRecognizerCallback: null | ((gesture: strin
     flipHorizontal: boolean = false
   ) {
     const ctx = canvas.getContext('2d')! as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
-    ctx.save();
     const videoWidth = video.videoWidth;
     const videoHeight = video.videoHeight;
     canvas.width = videoWidth;
     canvas.height = videoHeight;
+    ctx.save();
+
     if (flipHorizontal) {
       flipCanvasHorizontal(ctx.canvas);
     }
@@ -181,7 +181,7 @@ const useCamera = (options: { gestureRecognizerCallback: null | ((gesture: strin
     return canvas;
   }
 
-  async function predictGesture(videoFrame: ImageSource, _prevTime: number = performance.now()) {
+  async function predictGesture(videoFrame: ImageSource, _prevTime: number) {
     if (gestureRecognizerCallback) {
       await gestureRecognizer.recognizeForVideo(videoFrame, gestureRecognizerCallback, _prevTime);
     }
@@ -251,7 +251,7 @@ const useCamera = (options: { gestureRecognizerCallback: null | ((gesture: strin
         if (visualizationMode.value === 'virtualBackground' && bgLoaded) {
           await drawVirtualBackground(
             canvas,
-            camera?.video!,
+            camera!.video!,
             segmentation,
             bgCanvas,
             options.foregroundThreshold,
@@ -312,7 +312,7 @@ const useCamera = (options: { gestureRecognizerCallback: null | ((gesture: strin
       if (visualizationMode.value === 'virtualBackground' && bgLoaded) {
         await drawVirtualBackground(
           canvas,
-          camera?.video!,
+          camera!.video!,
           segmentation,
           bgCanvas,
           options.foregroundThreshold,
@@ -370,7 +370,7 @@ const useCamera = (options: { gestureRecognizerCallback: null | ((gesture: strin
         if (visualizationMode.value === 'virtualBackground' && bgLoaded) {
           await drawVirtualBackground(
             canvas,
-            camera?.video!,
+            camera!.video,
             segmentation,
             bgCanvas,
             options.foregroundThreshold,
@@ -395,10 +395,10 @@ const useCamera = (options: { gestureRecognizerCallback: null | ((gesture: strin
     }
   }
   const updateBackground = async (imageUrl?: string) => {
-    if (!imageUrl) {
+    if (!imageUrl || imageUrl === 'none' || imageUrl === 'bokehEffect') {
       return;
     }
-    const ctx = bgCanvas?.getContext('2d')!;
+    const ctx = bgCanvas!.getContext('2d')!;
     const backgroundImg = new Image();
     backgroundImg.src = imageUrl;
 

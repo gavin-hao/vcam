@@ -7,7 +7,7 @@ import {
 } from '@mediapipe/tasks-vision';
 import { getCanvasSize, getInputSize } from './renderUtils';
 type ImageSource = HTMLVideoElement | HTMLCanvasElement | ImageBitmap | ImageData | OffscreenCanvas | VideoFrame;
-let elapsedTime = 0;
+// let elapsedTime = 0;
 class DirectiveProcess {
   private directive: 'Victory' | 'SlideRght' | 'SlideLeft' | null = null;
   private count = 0;
@@ -27,7 +27,7 @@ class DirectiveProcess {
       this.count++;
       this.activatedTime = performance.now();
       this.startTimer();
-      console.log(`Victory pending ${this.activatedTime} , count: ${this.count}`);
+      // console.log(`Victory pending ${this.activatedTime} , count: ${this.count}`);
       return 'pending';
     } else {
       const tick = performance.now() - this.activatedTime;
@@ -46,7 +46,7 @@ class DirectiveProcess {
   }
   private startTimer() {
     this.clearTimer();
-    let cbFn = this.reset.bind(this);
+    const cbFn = this.reset.bind(this);
     this.timer = setTimeout(() => {
       cbFn();
     }, this.interval);
@@ -76,7 +76,7 @@ export class Gesture {
   showHandsKeypoints: boolean;
   private canvas?: HTMLCanvasElement = undefined;
   private canvasCtx?: CanvasRenderingContext2D;
-  running: boolean = false;
+  running: boolean = true;
   constructor(options: {
     mediapipeVisionWasmPath: string;
     modelAssetPath: string;
@@ -123,17 +123,19 @@ export class Gesture {
   async recognizeForVideo(
     videoFrame: ImageSource,
     callback: (gesture: string, originResult?: GestureRecognizerResult) => void,
-    _prevTime: number = performance.now()
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _prevTime?: number
   ) {
     if (!this.gestureRecognizer) {
       await this.load();
     }
 
-    let time = performance.now();
-    elapsedTime += time - _prevTime;
-    let ratio = 16.7; //1000 / 20;
-    if (elapsedTime < ratio || !this.running) {
-      // console.log(`skip detect becasuse deltaTime ${elapsedTime} < ${ratio}`, elapsedTime, time, _prevTime);
+    const time = performance.now();
+
+    // elapsedTime += time - _prevTime;
+    // const ratio = 16.7; //1000 / 20;
+    if (!this.running) {
+      console.log(`skip detect becasuse running signal= ${this.running} `);
       if (!this.running && this.showHandsKeypoints && this.canvas != null) {
         this.canvasCtx?.clearRect(0, 0, this.canvas!.width, this.canvas!.height);
       }
@@ -152,11 +154,11 @@ export class Gesture {
       this.canvasCtx?.translate(width, 0);
       this.canvasCtx?.scale(-1, 1);
     }
-    const result = await this.gestureRecognizer!.recognizeForVideo(videoFrame, performance.now());
+    const result = await this.gestureRecognizer!.recognizeForVideo(videoFrame, time);
     const gestureCategory = await this.processResult(result);
     callback(gestureCategory, result);
     // console.log('gestureRecognizerResult', result, elapsedTime, time, _prevTime);
-    elapsedTime = 0;
+    // elapsedTime = 0;
   }
 
   // 当前正在处理中的指令
@@ -174,8 +176,8 @@ export class Gesture {
       const drawingUtils = new DrawingUtils(this.canvasCtx!);
       if (predictResult.landmarks) {
         for (const i in predictResult.landmarks) {
-          let landmarks = predictResult.landmarks[i];
-          let isLeftHands = predictResult.handedness[i][0].categoryName === 'Left';
+          const landmarks = predictResult.landmarks[i];
+          const isLeftHands = predictResult.handedness[i][0].categoryName === 'Left';
           drawingUtils.drawConnectors(landmarks, GestureRecognizer.HAND_CONNECTIONS, {
             color: isLeftHands ? '#00FF0080' : '#0000FF80',
             lineWidth: 5,
@@ -188,9 +190,9 @@ export class Gesture {
       }
       this.canvasCtx?.restore();
     }
-
+    //拍照手势识别
     if (predictResult.gestures.length > 0) {
-      let rightHandIndex = predictResult.handedness.findIndex((hand) => hand[0].categoryName === 'Right');
+      const rightHandIndex = predictResult.handedness.findIndex((hand) => hand[0].categoryName === 'Right');
       let gestures = predictResult.gestures;
       // 如果存在右手 则只检测右手
       if (rightHandIndex > -1) {
@@ -205,7 +207,7 @@ export class Gesture {
         console.log(`GestureRecognizer: ${categoryName}\n Confidence: ${score} %\n Handedness: ${handedness}`);
         //'Thumb_Up', 'Victory' 连续3次识别成功 score>0.4 激活拍照
         if (categoryName === 'Victory' || (categoryName === 'Thumb_Up' && score > 0.65)) {
-          const directiveResult = this.currentProcess.tryActiveDirective('Victory', 4);
+          const directiveResult = this.currentProcess.tryActiveDirective('Victory', 10);
           if (directiveResult === 'success') {
             return 'Victory';
           } else if (directiveResult === 'canceled') {
@@ -216,6 +218,10 @@ export class Gesture {
           }
         }
       }
+    }
+    // 左滑手势识别
+    if (predictResult.landmarks.length > 0) {
+      // 以
     }
     return 'Unknown';
   }
