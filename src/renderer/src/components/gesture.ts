@@ -269,6 +269,9 @@ export class Gesture {
         this.historyX = [];
         return 'SlideRight';
       }
+      if (new Date().getTime() - this.historyX[0].t > 1000) {
+        this.historyX = [];
+      }
     } else {
       this.historyX.push({ x: x, t: new Date().getTime() });
       if (this.historyX.length > 3) {
