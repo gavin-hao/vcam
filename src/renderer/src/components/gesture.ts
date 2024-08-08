@@ -14,7 +14,6 @@ class DirectiveProcess {
   activatedTime: number = 0;
   timer: ReturnType<typeof setTimeout> | null = null;
   interval: number;
-
   constructor(interval: number = 500) {
     this.interval = interval;
   }
@@ -79,6 +78,7 @@ export class Gesture {
   running: boolean = true;
   hand?: string;
   gestureHistory? = [] as { location: string; xVal: number }[];
+  historyX?: { x: number; t: number }[];
   constructor(options: {
     mediapipeVisionWasmPath: string;
     modelAssetPath: string;
@@ -221,68 +221,108 @@ export class Gesture {
             break;
           }
         } else {
-          console.log(this.hand && handedness === this.hand, 11111111);
-          if (this.hand && handedness === this.hand) {
-            const result = this.dealCoordinates(predictResult.worldLandmarks[i], predictResult.landmarks[i]);
-            if (result !== 'Unknown') {
-              return result;
-            }
+          const result = this.dealCoordinates(predictResult.landmarks[i]);
+          if (result !== 'Unknown') {
+            return result;
           }
-          if (categoryName === 'Open_Palm') {
-            const directiveResult = this.currentProcess.tryActiveDirective('Open_Palm', 10);
-            if (directiveResult === 'success') {
-              this.hand = predictResult.handedness[i][0].categoryName;
-              console.error(99999999999999, predictResult.handedness[i][0].categoryName);
-              // return 'Open_Palm';
-              return 'Open_Palm';
-            } else if (directiveResult === 'canceled') {
-              continue;
-            } else {
-              // pending 状态 则 直接跳出循环 等待下一次检测结果
-              break;
-            }
-          }
+
+          // if (categoryName === 'Open_Palm') {
+          //   const directiveResult = this.currentProcess.tryActiveDirective('Open_Palm', 10);
+          //   if (directiveResult === 'success') {
+          //     this.hand = predictResult.handedness[i][0].categoryName;
+          //     console.error(99999999999999, predictResult.handedness[i][0].categoryName);
+          //     // return 'Open_Palm';
+          //     return 'Open_Palm';
+          //   } else if (directiveResult === 'canceled') {
+          //     continue;
+          //   } else {
+          //     // pending 状态 则 直接跳出循环 等待下一次检测结果
+          //     break;
+          //   }
+          // }
         }
       }
     }
     return 'Unknown';
   }
 
-  private dealCoordinates(worldLandmarks, landmarks) {
-    console.log(worldLandmarks, 99123123123123);
-    const y = [] as number[];
-    const x = [] as number[];
-    if (!worldLandmarks || worldLandmarks.length <= 0) return 'Unknown';
-    worldLandmarks.forEach((item, index) => {
-      if (index >= 5 && index < 17) {
-        y.push(item.y < worldLandmarks[index + 4].y ? 1 : -1);
+  private isActivated() {
+    if (this.historyX && this.historyX.length >= 3) {
+      const tDiff = this.historyX[2].t - this.historyX[0].t;
+      return this.historyX.filter((item) => Math.abs(item.x - 0.5) > 0.2).length >= 3 && tDiff < 1000;
+    }
+    return false;
+  }
+
+  private dealCoordinates(landmarks) {
+    if (!this.historyX) {
+      this.historyX = [];
+    }
+    const x: number = landmarks[8].x;
+    if (this.isActivated()) {
+      const diff = Math.abs(x - this.historyX[2].x);
+      if (diff >= 0.5 && x >= 0.5) {
+        this.historyX = [];
+        return 'SlideLeft';
       }
-      if (index >= 8 && index % 4 === 0) {
-        x.push(item.x > worldLandmarks[index - 3].x ? 1 : -1);
+      if (diff >= 0.5 && x < 0.5) {
+        this.historyX = [];
+        return 'SlideRight';
       }
-    });
-    const locationResult = this.getLocation({ x: x, y: y, xVal: landmarks[8].x });
-    console.log(locationResult, 123123123123123);
-    if (locationResult.location === '' || locationResult.xVal === null) {
-      console.log('0000');
-      return 'Unknown';
+    } else {
+      this.historyX.push({ x: x, t: new Date().getTime() });
+      if (this.historyX.length > 3) {
+        this.historyX = this.historyX.slice(-3);
+      }
     }
-    if (!this.gestureHistory) {
-      this.gestureHistory = [];
-    }
-    if (this.gestureHistory.length < 2 || this.gestureHistory[0].location !== this.gestureHistory[1].location) {
-      this.setGesture(locationResult);
-      return 'Unknown';
-    }
-    if (locationResult.location === this.gestureHistory[0].location) {
-      return 'Unknown';
-    }
-    this.gestureHistory = [];
-    console.error(this.hand, `Slide${locationResult.location}`);
+    return 'Unknown';
+    //const y = [] as number[];
+    //const x = [] as number[];
+    // if (!worldLandmarks || worldLandmarks.length <= 0) return 'Unknown';
+    // worldLandmarks.forEach((item, index) => {
+    //   if (index >= 5 && index < 17) {
+    //     y.push(item.y < worldLandmarks[index + 4].y ? 1 : -1);
+    //   }
+    //   if (index >= 8 && index % 4 === 0) {
+    //     x.push(item.x > worldLandmarks[index - 3].x ? 1 : -1);
+    //   }
+    // });
+    // const locationResult = this.getLocation({ x: x, y: y, xVal: landmarks[8].x });
+    //console.error(locationResult, 123123123123123);
+    // if (locationResult.location === '' || locationResult.xVal === null) {
+    //   console.log('0000');
+    //   return 'Unknown';
+    // }
+    // if (!this.gestureHistory) {
+    //   this.gestureHistory = [];
+    // }
+    // if (this.gestureHistory.length === 0) {
+    //   this.setGesture(locationResult);
+    //   return 'Unknown';
+    // }
+    // // if (this.gestureHistory.length < 2 || this.gestureHistory[0].location !== this.gestureHistory[1].location) {
+    // //   this.setGesture(locationResult);
+    // //   return 'Unknown';
+    // // }
+    // console.error(locationResult.xVal, this.gestureHistory[0].xVal, 'xasdasda');
+    // if (Math.abs(locationResult.xVal - this.gestureHistory[0].xVal) > 0.5) {
+    //   // this.gestureHistory = [];
+    //   return `Slide${this.hand}`;
+    // }
+    // return 'Unknown';
+    // if (locationResult.location === this.gestureHistory[0].location) {
+    //   return 'Unknown';
+    // }
+    // this.gestureHistory = [];
+    // console.error(this.hand, `Slide${locationResult.location}`);
     // return this.hand === 'Left' ? 'SlideRight' : 'SlideLeft';
-    return `Slide${this.hand}`;
+    // return `Slide${this.hand}`;
     // console.log(newLocation.location, gesture.value[0].handedness, gesture.value[1].handedness);
     // if (Math.abs(newLocation.xVal - (gesture.value[1].xVal as number)) > 0.5) {
+  }
+
+  private getLocation2(value) {
+    return value.xVal;
   }
 
   private getLocation(value) {
@@ -297,11 +337,11 @@ export class Gesture {
   }
 
   private setGesture(locationResult) {
-    if (locationResult.location !== '' && this.gestureHistory) {
+    if (locationResult.location !== '' && this.gestureHistory && this.gestureHistory.length === 0) {
       this.gestureHistory.push(locationResult);
-      if (this.gestureHistory.length > 2) {
-        this.gestureHistory = this.gestureHistory.slice(-2);
-      }
+      // if (this.gestureHistory.length > 2) {
+      //   this.gestureHistory = this.gestureHistory.slice(-2);
+      // }
     }
   }
 }
