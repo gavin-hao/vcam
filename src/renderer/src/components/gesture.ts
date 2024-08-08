@@ -76,8 +76,6 @@ export class Gesture {
   private canvas?: HTMLCanvasElement = undefined;
   private canvasCtx?: CanvasRenderingContext2D;
   running: boolean = true;
-  hand?: string;
-  gestureHistory? = [] as { location: string; xVal: number }[];
   historyX?: { x: number; t: number }[];
   constructor(options: {
     mediapipeVisionWasmPath: string;
@@ -205,8 +203,6 @@ export class Gesture {
       for (const i in gestures) {
         const categoryName = gestures[i][0].categoryName;
         const score = gestures[i][0].score;
-        const handedness = predictResult.handedness[i][0].displayName;
-
         // console.log(`GestureRecognizer: ${categoryName}\n Confidence: ${score} %\n Handedness: ${handedness}`);
         //'Thumb_Up', 'Victory' 连续3次识别成功 score>0.4 激活拍照
         if (categoryName === 'Victory' || (categoryName === 'Thumb_Up' && score > 0.65)) {
@@ -221,25 +217,7 @@ export class Gesture {
             break;
           }
         } else {
-          const result = this.dealCoordinates(predictResult.landmarks[i]);
-          if (result !== 'Unknown') {
-            return result;
-          }
-
-          // if (categoryName === 'Open_Palm') {
-          //   const directiveResult = this.currentProcess.tryActiveDirective('Open_Palm', 10);
-          //   if (directiveResult === 'success') {
-          //     this.hand = predictResult.handedness[i][0].categoryName;
-          //     console.error(99999999999999, predictResult.handedness[i][0].categoryName);
-          //     // return 'Open_Palm';
-          //     return 'Open_Palm';
-          //   } else if (directiveResult === 'canceled') {
-          //     continue;
-          //   } else {
-          //     // pending 状态 则 直接跳出循环 等待下一次检测结果
-          //     break;
-          //   }
-          // }
+          return this.dealCoordinates(predictResult.landmarks[i]);
         }
       }
     }
@@ -279,73 +257,6 @@ export class Gesture {
       }
     }
     return 'Unknown';
-    //const y = [] as number[];
-    //const x = [] as number[];
-    // if (!worldLandmarks || worldLandmarks.length <= 0) return 'Unknown';
-    // worldLandmarks.forEach((item, index) => {
-    //   if (index >= 5 && index < 17) {
-    //     y.push(item.y < worldLandmarks[index + 4].y ? 1 : -1);
-    //   }
-    //   if (index >= 8 && index % 4 === 0) {
-    //     x.push(item.x > worldLandmarks[index - 3].x ? 1 : -1);
-    //   }
-    // });
-    // const locationResult = this.getLocation({ x: x, y: y, xVal: landmarks[8].x });
-    //console.error(locationResult, 123123123123123);
-    // if (locationResult.location === '' || locationResult.xVal === null) {
-    //   console.log('0000');
-    //   return 'Unknown';
-    // }
-    // if (!this.gestureHistory) {
-    //   this.gestureHistory = [];
-    // }
-    // if (this.gestureHistory.length === 0) {
-    //   this.setGesture(locationResult);
-    //   return 'Unknown';
-    // }
-    // // if (this.gestureHistory.length < 2 || this.gestureHistory[0].location !== this.gestureHistory[1].location) {
-    // //   this.setGesture(locationResult);
-    // //   return 'Unknown';
-    // // }
-    // console.error(locationResult.xVal, this.gestureHistory[0].xVal, 'xasdasda');
-    // if (Math.abs(locationResult.xVal - this.gestureHistory[0].xVal) > 0.5) {
-    //   // this.gestureHistory = [];
-    //   return `Slide${this.hand}`;
-    // }
-    // return 'Unknown';
-    // if (locationResult.location === this.gestureHistory[0].location) {
-    //   return 'Unknown';
-    // }
-    // this.gestureHistory = [];
-    // console.error(this.hand, `Slide${locationResult.location}`);
-    // return this.hand === 'Left' ? 'SlideRight' : 'SlideLeft';
-    // return `Slide${this.hand}`;
-    // console.log(newLocation.location, gesture.value[0].handedness, gesture.value[1].handedness);
-    // if (Math.abs(newLocation.xVal - (gesture.value[1].xVal as number)) > 0.5) {
-  }
-
-  private getLocation2(value) {
-    return value.xVal;
-  }
-
-  private getLocation(value) {
-    console.log('rrrrrrrr');
-    const { x, y, xVal } = value;
-    const yTop = y.filter((item) => item > 0).length >= 10;
-    const xTop = x.filter((item) => item > 0).length >= 3;
-    const xBottom = x.filter((item) => item < 0).length >= 3;
-    if (yTop && xTop) return { location: 'Left', xVal };
-    if (yTop && xBottom) return { location: 'Right', xVal };
-    return { location: '', xVal };
-  }
-
-  private setGesture(locationResult) {
-    if (locationResult.location !== '' && this.gestureHistory && this.gestureHistory.length === 0) {
-      this.gestureHistory.push(locationResult);
-      // if (this.gestureHistory.length > 2) {
-      //   this.gestureHistory = this.gestureHistory.slice(-2);
-      // }
-    }
   }
 }
 
