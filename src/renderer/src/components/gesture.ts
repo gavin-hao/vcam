@@ -9,7 +9,7 @@ import { getCanvasSize, getInputSize } from './renderUtils';
 type ImageSource = HTMLVideoElement | HTMLCanvasElement | ImageBitmap | ImageData | OffscreenCanvas | VideoFrame;
 // let elapsedTime = 0;
 class DirectiveProcess {
-  private directive: 'Victory' | 'SlideRght' | 'SlideLeft' | null = null;
+  private directive: 'Victory' | 'SlideRght' | 'SlideLeft' | 'Open_Palm' | null = null;
   private count = 0;
   activatedTime: number = 0;
   timer: ReturnType<typeof setTimeout> | null = null;
@@ -19,7 +19,7 @@ class DirectiveProcess {
     this.interval = interval;
   }
   tryActiveDirective(
-    directive: 'Victory' | 'SlideRght' | 'SlideLeft',
+    directive: 'Victory' | 'SlideRght' | 'SlideLeft' | 'Open_Palm',
     threshold: number = 3
   ): 'pending' | 'success' | 'canceled' {
     if (this.directive == null) {
@@ -77,6 +77,8 @@ export class Gesture {
   private canvas?: HTMLCanvasElement = undefined;
   private canvasCtx?: CanvasRenderingContext2D;
   running: boolean = true;
+  hand?: string;
+  gestureHistory? = [] as { location: string; xVal: number }[];
   constructor(options: {
     mediapipeVisionWasmPath: string;
     modelAssetPath: string;
@@ -190,6 +192,7 @@ export class Gesture {
       }
       this.canvasCtx?.restore();
     }
+
     //拍照手势识别
     if (predictResult.gestures.length > 0) {
       const rightHandIndex = predictResult.handedness.findIndex((hand) => hand[0].categoryName === 'Right');
@@ -204,9 +207,10 @@ export class Gesture {
         const score = gestures[i][0].score;
         const handedness = predictResult.handedness[i][0].displayName;
 
-        console.log(`GestureRecognizer: ${categoryName}\n Confidence: ${score} %\n Handedness: ${handedness}`);
+        // console.log(`GestureRecognizer: ${categoryName}\n Confidence: ${score} %\n Handedness: ${handedness}`);
         //'Thumb_Up', 'Victory' 连续3次识别成功 score>0.4 激活拍照
         if (categoryName === 'Victory' || (categoryName === 'Thumb_Up' && score > 0.65)) {
+          // this.hand = '';
           const directiveResult = this.currentProcess.tryActiveDirective('Victory', 10);
           if (directiveResult === 'success') {
             return 'Victory';
@@ -216,14 +220,89 @@ export class Gesture {
             // pending 状态 则 直接跳出循环 等待下一次检测结果
             break;
           }
+        } else {
+          console.log(this.hand && handedness === this.hand, 11111111);
+          if (this.hand && handedness === this.hand) {
+            const result = this.dealCoordinates(predictResult.worldLandmarks[i], predictResult.landmarks[i]);
+            if (result !== 'Unknown') {
+              return result;
+            }
+          }
+          if (categoryName === 'Open_Palm') {
+            const directiveResult = this.currentProcess.tryActiveDirective('Open_Palm', 10);
+            if (directiveResult === 'success') {
+              this.hand = predictResult.handedness[i][0].categoryName;
+              console.error(99999999999999, predictResult.handedness[i][0].categoryName);
+              // return 'Open_Palm';
+              return 'Open_Palm';
+            } else if (directiveResult === 'canceled') {
+              continue;
+            } else {
+              // pending 状态 则 直接跳出循环 等待下一次检测结果
+              break;
+            }
+          }
         }
       }
     }
-    // 左滑手势识别
-    if (predictResult.landmarks.length > 0) {
-      // 以
-    }
     return 'Unknown';
+  }
+
+  private dealCoordinates(worldLandmarks, landmarks) {
+    console.log(worldLandmarks, 99123123123123);
+    const y = [] as number[];
+    const x = [] as number[];
+    if (!worldLandmarks || worldLandmarks.length <= 0) return 'Unknown';
+    worldLandmarks.forEach((item, index) => {
+      if (index >= 5 && index < 17) {
+        y.push(item.y < worldLandmarks[index + 4].y ? 1 : -1);
+      }
+      if (index >= 8 && index % 4 === 0) {
+        x.push(item.x > worldLandmarks[index - 3].x ? 1 : -1);
+      }
+    });
+    const locationResult = this.getLocation({ x: x, y: y, xVal: landmarks[8].x });
+    console.log(locationResult, 123123123123123);
+    if (locationResult.location === '' || locationResult.xVal === null) {
+      console.log('0000');
+      return 'Unknown';
+    }
+    if (!this.gestureHistory) {
+      this.gestureHistory = [];
+    }
+    if (this.gestureHistory.length < 2 || this.gestureHistory[0].location !== this.gestureHistory[1].location) {
+      this.setGesture(locationResult);
+      return 'Unknown';
+    }
+    if (locationResult.location === this.gestureHistory[0].location) {
+      return 'Unknown';
+    }
+    this.gestureHistory = [];
+    console.error(this.hand, `Slide${locationResult.location}`);
+    // return this.hand === 'Left' ? 'SlideRight' : 'SlideLeft';
+    return `Slide${this.hand}`;
+    // console.log(newLocation.location, gesture.value[0].handedness, gesture.value[1].handedness);
+    // if (Math.abs(newLocation.xVal - (gesture.value[1].xVal as number)) > 0.5) {
+  }
+
+  private getLocation(value) {
+    console.log('rrrrrrrr');
+    const { x, y, xVal } = value;
+    const yTop = y.filter((item) => item > 0).length >= 10;
+    const xTop = x.filter((item) => item > 0).length >= 3;
+    const xBottom = x.filter((item) => item < 0).length >= 3;
+    if (yTop && xTop) return { location: 'Left', xVal };
+    if (yTop && xBottom) return { location: 'Right', xVal };
+    return { location: '', xVal };
+  }
+
+  private setGesture(locationResult) {
+    if (locationResult.location !== '' && this.gestureHistory) {
+      this.gestureHistory.push(locationResult);
+      if (this.gestureHistory.length > 2) {
+        this.gestureHistory = this.gestureHistory.slice(-2);
+      }
+    }
   }
 }
 

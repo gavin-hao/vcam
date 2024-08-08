@@ -6,9 +6,14 @@
       <!-- <canvas id="hands" ref="gestureCanvas"></canvas> -->
       <img v-show="!!currentBackground" id="background" :src="currentBackground" alt="" />
       <audio v-show="false" ref="audioShutter" :src="shutterMp3" :loop="false" :volume="0.7"></audio>
-      <div id="countdown" class="countdown" v-show="countdown >= 0">
+      <div v-show="countdown >= 0" id="countdown" class="countdown">
         <span>{{ countdown }}</span>
       </div>
+      <!-- <div v-show="palmCue && countdown < 0" id="palm-cue" class="palm-cue">
+        <span
+          ><el-icon :size="100"><Pointer /></el-icon
+        ></span>
+      </div> -->
     </div>
     <div ref="controlRef" class="footer">
       <Control
@@ -31,6 +36,7 @@
 <script setup lang="ts">
 import BackgroundDialog from './BackgroundDialog.vue';
 import Control from './Contols.vue';
+//import { Pointer } from '@element-plus/icons-vue';
 import * as Mousetrap from 'mousetrap';
 import { computed, onMounted, onUnmounted, ref, watchEffect } from 'vue';
 import { useElementBounding, useIntervalFn } from '@vueuse/core';
@@ -58,6 +64,7 @@ const dialogBackgroundVisible = ref<boolean>(false);
 const audioShutter = ref<HTMLAudioElement>();
 const lastPhoto = ref<string>();
 const countdown = ref<number>(-1);
+//const palmCue = ref<boolean>(false);
 const allBgImgs = computed(() => {
   return bgImgs.value?.default.concat(bgImgs.value.user) || [];
 });
@@ -129,6 +136,16 @@ function gestureRecognizerCallback(gesture) {
     setGestureSignal(false);
     startCountdown();
   }
+  // else if (gesture === 'Open_Palm') {
+  //   palmCue.value = true;
+  //   //  //暂停识别手势
+  //   //  setGestureSignal(false);
+  //   // Mousetrap.trigger('down');
+  //   // //等待500ms后再开始识别手势
+  //   // setTimeout(() => {
+  //   //   setGestureSignal(true);
+  //   // }, 500);
+  // }
 }
 
 const onKeyboardShortcuts = (combo: string) => {
@@ -147,6 +164,7 @@ const onKeyboardShortcuts = (combo: string) => {
     case 'tab':
     case 'space':
       handlePhotoClick();
+      break;
     default:
       break;
   }
@@ -231,6 +249,25 @@ onUnmounted(() => {
       z-index: 1;
     }
     #countdown {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 150px;
+      height: 150px;
+      line-height: 100px;
+      font-size: 100px;
+      font-weight: 500;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      color: #ffffff;
+      border: 5px solid rgba(252, 0, 0, 0.8);
+      // color: #00ff00b3;
+    }
+    #palm-cue {
       position: absolute;
       top: 50%;
       left: 50%;
