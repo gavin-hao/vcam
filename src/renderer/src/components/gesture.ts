@@ -35,10 +35,10 @@ class DirectiveProcess {
         if (this.count >= threshold) {
           return 'success';
         }
-        console.log(`Victory pending ${this.activatedTime} , count: ${this.count},tick:${tick}`);
+        // console.log(`Victory pending ${this.activatedTime} , count: ${this.count},tick:${tick}`);
         return 'pending';
       } else {
-        console.log(`Victory canceled ${this.activatedTime} , count: ${this.count},tick:${tick}`);
+        // console.log(`Victory canceled ${this.activatedTime} , count: ${this.count},tick:${tick}`);
         return 'canceled';
       }
     }
@@ -57,7 +57,7 @@ class DirectiveProcess {
     }
   }
   reset() {
-    console.log(`Directive [${this.directive}] canceled ${this.activatedTime} , count: ${this.count}`);
+    // console.log(`Directive [${this.directive}] canceled ${this.activatedTime} , count: ${this.count}`);
 
     this.directive = null;
     this.activatedTime = 0;
@@ -76,7 +76,7 @@ export class Gesture {
   private canvas?: HTMLCanvasElement = undefined;
   private canvasCtx?: CanvasRenderingContext2D;
   running: boolean = true;
-  historyX?: { x: number; t: number }[];
+  historyX?: { x: number; y: number; t: number }[];
   constructor(options: {
     mediapipeVisionWasmPath: string;
     modelAssetPath: string;
@@ -86,7 +86,8 @@ export class Gesture {
     this.wasmPath = options.mediapipeVisionWasmPath;
     this.modelAssetPath = options.modelAssetPath;
     this.domContainer = options.renderContainer;
-    this.showHandsKeypoints = options.showHandsKeypoints || false;
+    this.showHandsKeypoints = false;
+    // this.showHandsKeypoints = options.showHandsKeypoints;
     if (this.showHandsKeypoints) {
       this.createRenderCanvas();
       this.canvasCtx = this.canvas!.getContext('2d')!;
@@ -135,7 +136,7 @@ export class Gesture {
     // elapsedTime += time - _prevTime;
     // const ratio = 16.7; //1000 / 20;
     if (!this.running) {
-      console.log(`skip detect becasuse running signal= ${this.running} `);
+      // console.log(`skip detect becasuse running signal= ${this.running} `);
       if (!this.running && this.showHandsKeypoints && this.canvas != null) {
         this.canvasCtx?.clearRect(0, 0, this.canvas!.width, this.canvas!.height);
       }
@@ -208,6 +209,7 @@ export class Gesture {
         if (categoryName === 'Victory' || (categoryName === 'Thumb_Up' && score > 0.65)) {
           // this.hand = '';
           const directiveResult = this.currentProcess.tryActiveDirective('Victory', 10);
+          console.log(directiveResult, 'directiveResult');
           if (directiveResult === 'success') {
             return 'Victory';
           } else if (directiveResult === 'canceled') {
@@ -227,7 +229,7 @@ export class Gesture {
   private isActivated() {
     if (this.historyX && this.historyX.length >= 3) {
       const tDiff = this.historyX[2].t - this.historyX[0].t;
-      return this.historyX.filter((item) => Math.abs(item.x - 0.5) > 0.2).length >= 3 && tDiff < 1000;
+      return this.historyX.filter((item) => Math.abs(item.x - 0.5) > 0.1).length >= 3 && tDiff < 500;
     }
     return false;
   }
@@ -237,21 +239,23 @@ export class Gesture {
       this.historyX = [];
     }
     const x: number = landmarks[8].x;
+    const y: number = landmarks[8].y;
     if (this.isActivated()) {
       const diff = Math.abs(x - this.historyX[2].x);
-      if (diff >= 0.5 && x >= 0.5) {
+      const diffF = y - this.historyX[2].y;
+      if (diff >= 0.3 && x >= 0.4 && diffF >= 0) {
         this.historyX = [];
         return 'SlideLeft';
       }
-      if (diff >= 0.5 && x < 0.5) {
+      if (diff >= 0.3 && x < 0.6 && diffF >= 0) {
         this.historyX = [];
         return 'SlideRight';
       }
-      if (new Date().getTime() - this.historyX[0].t > 1000) {
+      if (new Date().getTime() - this.historyX[0].t > 500) {
         this.historyX = [];
       }
     } else {
-      this.historyX.push({ x: x, t: new Date().getTime() });
+      this.historyX.push({ x: x, y: y, t: new Date().getTime() });
       if (this.historyX.length > 3) {
         this.historyX = this.historyX.slice(-3);
       }
