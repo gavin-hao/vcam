@@ -86,8 +86,8 @@ export class Gesture {
     this.wasmPath = options.mediapipeVisionWasmPath;
     this.modelAssetPath = options.modelAssetPath;
     this.domContainer = options.renderContainer;
-    this.showHandsKeypoints = false;
-    // this.showHandsKeypoints = options.showHandsKeypoints;
+    // this.showHandsKeypoints = false;
+    this.showHandsKeypoints = options.showHandsKeypoints;
     if (this.showHandsKeypoints) {
       this.createRenderCanvas();
       this.canvasCtx = this.canvas!.getContext('2d')!;
@@ -175,15 +175,16 @@ export class Gesture {
       this.canvasCtx!.save();
       this.canvasCtx!.clearRect(0, 0, this.canvas!.width, this.canvas!.height);
       const drawingUtils = new DrawingUtils(this.canvasCtx!);
-      if (predictResult.landmarks) {
+      if (predictResult.landmarks && this.historyX && this.historyX.length >= 3) {
         for (const i in predictResult.landmarks) {
           const landmarks = predictResult.landmarks[i];
+          const filterLandmarks = landmarks.filter((_item, index) => index === 8);
           const isLeftHands = predictResult.handedness[i][0].categoryName === 'Left';
-          drawingUtils.drawConnectors(landmarks, GestureRecognizer.HAND_CONNECTIONS, {
+          drawingUtils.drawConnectors(filterLandmarks, GestureRecognizer.HAND_CONNECTIONS, {
             color: isLeftHands ? '#00FF0080' : '#0000FF80',
             lineWidth: 5,
           });
-          drawingUtils.drawLandmarks(landmarks, {
+          drawingUtils.drawLandmarks(filterLandmarks, {
             color: '#FF000080',
             lineWidth: 2,
           });
@@ -229,7 +230,11 @@ export class Gesture {
   private isActivated() {
     if (this.historyX && this.historyX.length >= 3) {
       const tDiff = this.historyX[2].t - this.historyX[0].t;
-      return this.historyX.filter((item) => Math.abs(item.x - 0.5) > 0.1).length >= 3 && tDiff < 500;
+      console.log(window.initialRecognitionRatio || 0.1);
+      return (
+        this.historyX.filter((item) => Math.abs(item.x - 0.5) > window.initialRecognitionRatio || 0.1).length >= 3 &&
+        tDiff < 500
+      );
     }
     return false;
   }
@@ -243,15 +248,17 @@ export class Gesture {
     if (this.isActivated()) {
       const diff = Math.abs(x - this.historyX[2].x);
       const diffF = y - this.historyX[2].y;
-      if (diff >= 0.3 && x >= 0.4 && diffF >= 0) {
+      const slidingMinimumDistanceRatio = window.slidingMinimumDistanceRatio || 0.3;
+      const endpointRecognitionAreaRatio = window.endpointRecognitionAreaRatio || 0.6;
+      if (diff >= slidingMinimumDistanceRatio && x >= 1 - endpointRecognitionAreaRatio && diffF >= 0) {
         this.historyX = [];
         return 'SlideLeft';
       }
-      if (diff >= 0.3 && x < 0.6 && diffF >= 0) {
+      if (diff >= slidingMinimumDistanceRatio && x < endpointRecognitionAreaRatio && diffF >= 0) {
         this.historyX = [];
         return 'SlideRight';
       }
-      if (new Date().getTime() - this.historyX[0].t > 500) {
+      if (new Date().getTime() - this.historyX[0].t > (window.recognitionTimeCycle || 500)) {
         this.historyX = [];
       }
     } else {

@@ -1,13 +1,13 @@
 <template>
-  <el-dialog width="60%" class="back-dialog" :modelValue="modelValue" @close="onClose" title="设置背景">
+  <el-dialog width="60%" class="back-dialog" :model-value="modelValue" title="设置背景" @close="onClose">
     <div class="bg-settings">
       <div class="image-list">
         <div
-          class="image-item"
           v-for="image in images"
           :key="image"
-          @click="selectImage(image)"
+          class="image-item"
           :class="{ 'selected-image': image === selected }"
+          @click="selectImage(image)"
         >
           <div class="delete-btn" @click="handleRemoveBg(image)">
             <el-icon><Close /></el-icon>
@@ -15,16 +15,16 @@
           <img :src="image" alt="" />
         </div>
         <div
-          @click="selectImage('none')"
           class="image-item"
           :class="{ 'selected-image': !selected || images.length === 0 || selected == 'none' }"
+          @click="selectImage('none')"
         >
           无背景
         </div>
         <div
-          @click="selectImage('bokehEffect')"
           class="image-item bokeh"
           :class="{ 'selected-image': selected === 'bokehEffect' }"
+          @click="selectImage('bokehEffect')"
         >
           背景虚化
         </div>
@@ -32,7 +32,7 @@
     </div>
     <template #footer>
       <div class="dialog-footer">
-        <el-button type="primary" plain @click="handleAddBackgroundClick" :icon="Plus">添加背景图 </el-button>
+        <el-button type="primary" plain :icon="Plus" @click="handleAddBackgroundClick">添加背景图 </el-button>
 
         <el-button type="primary" @click="onClose()"> 确定 </el-button>
       </div>

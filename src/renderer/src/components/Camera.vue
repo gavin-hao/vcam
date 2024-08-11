@@ -23,6 +23,7 @@
         @shutter-click="handlePhotoClick"
         @open-background-dialog="handleOpenBackgroundDialog"
         @open-album="handleOpenAlbum"
+        @open-params-setting-dialog="handleOpenParamsSettingDialog"
       />
     </div>
     <BackgroundDialog
@@ -31,10 +32,12 @@
       :selected="currentBackground"
       @change="handleBackgroundChanged"
     />
+    <ParamsSettingDialog v-model="dialogParamsSettingVisible" />
   </div>
 </template>
 <script setup lang="ts">
 import BackgroundDialog from './BackgroundDialog.vue';
+import ParamsSettingDialog from './ParamsSettingDialog.vue';
 import Control from './Contols.vue';
 //import { Pointer } from '@element-plus/icons-vue';
 import * as Mousetrap from 'mousetrap';
@@ -61,6 +64,7 @@ const { container: controlRef } = useAutoHide();
 const { width, height } = useElementBounding(viewport);
 const bgImgs = ref<{ default: string[]; user: string[] }>();
 const dialogBackgroundVisible = ref<boolean>(false);
+const dialogParamsSettingVisible = ref<boolean>(false);
 const audioShutter = ref<HTMLAudioElement>();
 const lastPhoto = ref<string>();
 const countdown = ref<number>(-1);
@@ -114,6 +118,10 @@ const handlePhotoClick = async () => {
 };
 const handleOpenBackgroundDialog = () => {
   dialogBackgroundVisible.value = true;
+};
+
+const handleOpenParamsSettingDialog = () => {
+  dialogParamsSettingVisible.value = true;
 };
 
 function gestureRecognizerCallback(gesture) {
