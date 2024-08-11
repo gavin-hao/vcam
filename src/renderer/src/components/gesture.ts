@@ -209,8 +209,10 @@ export class Gesture {
         //'Thumb_Up', 'Victory' 连续3次识别成功 score>0.4 激活拍照
         if (categoryName === 'Victory' || (categoryName === 'Thumb_Up' && score > 0.65)) {
           // this.hand = '';
-          const directiveResult = this.currentProcess.tryActiveDirective('Victory', 10);
-          console.log(directiveResult, 'directiveResult');
+          const directiveResult = this.currentProcess.tryActiveDirective(
+            'Victory',
+            parseInt(localStorage.getItem('threshold') || '5') * 2
+          );
           if (directiveResult === 'success') {
             return 'Victory';
           } else if (directiveResult === 'canceled') {
@@ -230,10 +232,10 @@ export class Gesture {
   private isActivated() {
     if (this.historyX && this.historyX.length >= 3) {
       const tDiff = this.historyX[2].t - this.historyX[0].t;
-      console.log(window.initialRecognitionRatio || 0.1);
       return (
-        this.historyX.filter((item) => Math.abs(item.x - 0.5) > window.initialRecognitionRatio || 0.1).length >= 3 &&
-        tDiff < 500
+        this.historyX.filter(
+          (item) => Math.abs(item.x - 0.5) > parseFloat(localStorage.getItem('initialRecognitionRatio') || '0.1')
+        ).length >= 3 && tDiff < 500
       );
     }
     return false;
@@ -248,8 +250,8 @@ export class Gesture {
     if (this.isActivated()) {
       const diff = Math.abs(x - this.historyX[2].x);
       const diffF = y - this.historyX[2].y;
-      const slidingMinimumDistanceRatio = window.slidingMinimumDistanceRatio || 0.3;
-      const endpointRecognitionAreaRatio = window.endpointRecognitionAreaRatio || 0.6;
+      const slidingMinimumDistanceRatio = parseFloat(localStorage.getItem('slidingMinimumDistanceRatio') || '0.3');
+      const endpointRecognitionAreaRatio = parseFloat(localStorage.getItem('endpointRecognitionAreaRatio') || '0.6');
       if (diff >= slidingMinimumDistanceRatio && x >= 1 - endpointRecognitionAreaRatio && diffF >= 0) {
         this.historyX = [];
         return 'SlideLeft';
@@ -258,7 +260,7 @@ export class Gesture {
         this.historyX = [];
         return 'SlideRight';
       }
-      if (new Date().getTime() - this.historyX[0].t > (window.recognitionTimeCycle || 500)) {
+      if (new Date().getTime() - this.historyX[0].t > parseInt(localStorage.getItem('recognitionTimeCycle') || '500')) {
         this.historyX = [];
       }
     } else {
