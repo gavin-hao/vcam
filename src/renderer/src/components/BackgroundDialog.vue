@@ -84,7 +84,7 @@ const onClose = () => {
   padding: 24px;
   background-color: #eaeaea;
   border-radius: 4px;
-  max-height: 320px;
+  max-height: 400px;
   overflow-y: auto;
 }
 

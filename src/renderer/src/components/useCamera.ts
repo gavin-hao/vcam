@@ -255,7 +255,7 @@ const useCamera = (options: { gestureRecognizerCallback: null | ((gesture: strin
             segmentation,
             bgCanvas,
             options.foregroundThreshold,
-            2,
+            parseInt(localStorage.getItem('backgroundBlurAmount') || '0'),
             options.edgeBlur,
             options.flipHorizontal
           );
@@ -316,7 +316,7 @@ const useCamera = (options: { gestureRecognizerCallback: null | ((gesture: strin
           segmentation,
           bgCanvas,
           options.foregroundThreshold,
-          2,
+          parseInt(localStorage.getItem('backgroundBlurAmount') || '0'),
           options.edgeBlur,
           options.flipHorizontal
         );
@@ -374,7 +374,7 @@ const useCamera = (options: { gestureRecognizerCallback: null | ((gesture: strin
             segmentation,
             bgCanvas,
             options.foregroundThreshold,
-            2,
+            parseInt(localStorage.getItem('backgroundBlurAmount') || '0'),
             options.edgeBlur,
             options.flipHorizontal
           );

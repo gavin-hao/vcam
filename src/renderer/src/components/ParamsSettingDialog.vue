@@ -26,6 +26,11 @@
         <br />
         <el-input-number v-model="threshold" :precision="0" :step="1" :max="10" :min="1" />
       </div>
+      <div>
+        <span>背景虚化</span>
+        <br />
+        <el-input-number v-model="backgroundBlurAmount" :precision="0" :step="1" :max="20" :min="0" />
+      </div>
     </div>
     <template #footer>
       <div class="dialog-footer">
@@ -47,6 +52,7 @@ const slidingMinimumDistanceRatio = ref(0.3);
 const endpointRecognitionAreaRatio = ref(0.6);
 const recognitionTimeCycle = ref(500);
 const threshold = ref(5);
+const backgroundBlurAmount = ref(0);
 
 onMounted(() => {
   !localStorage.getItem('initialRecognitionRatio') && localStorage.setItem('initialRecognitionRatio', '0.1');
@@ -54,12 +60,14 @@ onMounted(() => {
   !localStorage.getItem('endpointRecognitionAreaRatio') && localStorage.setItem('endpointRecognitionAreaRatio', '0.6');
   !localStorage.getItem('recognitionTimeCycle') && localStorage.setItem('recognitionTimeCycle', '500');
   !localStorage.getItem('threshold') && localStorage.setItem('threshold', '5');
+  !localStorage.getItem('backgroundBlurAmount') && localStorage.setItem('backgroundBlurAmount', '0');
 
   initialRecognitionRatio.value = parseFloat(localStorage.getItem('initialRecognitionRatio') || '0.1');
   slidingMinimumDistanceRatio.value = parseFloat(localStorage.getItem('slidingMinimumDistanceRatio') || '0.3');
   endpointRecognitionAreaRatio.value = parseFloat(localStorage.getItem('endpointRecognitionAreaRatio') || '0.6');
   recognitionTimeCycle.value = parseInt(localStorage.getItem('recognitionTimeCycle') || '500');
   threshold.value = parseInt(localStorage.getItem('threshold') || '5');
+  backgroundBlurAmount.value = parseInt(localStorage.getItem('backgroundBlurAmount') || '0');
 });
 
 watch(
@@ -69,6 +77,7 @@ watch(
     slidingMinimumDistanceRatio.value,
     endpointRecognitionAreaRatio.value,
     threshold.value,
+    backgroundBlurAmount.value,
   ],
   () => {
     localStorage.setItem('initialRecognitionRatio', initialRecognitionRatio.value.toString());
@@ -76,6 +85,7 @@ watch(
     localStorage.setItem('endpointRecognitionAreaRatio', endpointRecognitionAreaRatio.value.toString());
     localStorage.setItem('recognitionTimeCycle', recognitionTimeCycle.value.toString());
     localStorage.setItem('threshold', threshold.value.toString());
+    localStorage.setItem('backgroundBlurAmount', backgroundBlurAmount.value.toString());
   }
 );
 
@@ -85,6 +95,7 @@ const init = () => {
   slidingMinimumDistanceRatio.value = 0.3;
   endpointRecognitionAreaRatio.value = 0.6;
   threshold.value = 5;
+  backgroundBlurAmount.value = 0;
 };
 
 const emits = defineEmits<{
@@ -112,7 +123,7 @@ const onClose = () => {
   padding: 24px;
   background-color: #eaeaea;
   border-radius: 4px;
-  max-height: 320px;
+  max-height: 400px;
   overflow-y: auto;
   span {
     font-size: 10px;
