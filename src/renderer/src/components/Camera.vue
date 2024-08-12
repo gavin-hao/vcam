@@ -48,20 +48,13 @@ import useCamera from './useCamera';
 import useAutoHide from './useAutoHide';
 import { getCanvasSize } from './renderUtils';
 const viewport = ref<HTMLDivElement>();
-const {
-  outputCanvas,
-  videoElement,
-  cameras,
-  switchCamera,
-  setVisualizationMode,
-  takePhoto,
-  setGestureSignal,
-  videoSize,
-} = useCamera({
-  gestureRecognizerCallback,
-});
+const { outputCanvas, videoElement, cameras, switchCamera, setVisualizationMode, takePhoto, setGestureSignal } =
+  useCamera({
+    gestureRecognizerCallback,
+  });
 const { container: controlRef } = useAutoHide();
 const { width, height } = useElementBounding(viewport);
+const { width: videoWidth, height: videoHeight } = useElementBounding(videoElement);
 const bgImgs = ref<{ default: string[]; user: string[] }>();
 const dialogBackgroundVisible = ref<boolean>(false);
 const dialogParamsSettingVisible = ref<boolean>(false);
@@ -81,7 +74,7 @@ watchEffect(() => {
     return;
   }
   outputCanvas.value!.style.transformOrigin = 'left top';
-  const { scale, xOffset, yOffset } = getCanvasSize(width.value, height.value, videoSize.width, videoSize.height);
+  const { scale, xOffset, yOffset } = getCanvasSize(width.value, height.value, videoWidth.value, videoHeight.value);
 
   outputCanvas.value!.style.transform = `scale(${scale}) translate( ${xOffset}px, ${yOffset}px )`;
 });
